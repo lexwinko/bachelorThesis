@@ -4,7 +4,7 @@ import os
 import csv
 import pandas as pd
 import numpy as np
-sys.path.append(os.path.abspath('../text-preprocessing-techniques'))
+sys.path.append(os.path.abspath('text-preprocessing-techniques'))
 from polyglot.detect import Detector
 from polyglot.text import Text
 import aspell

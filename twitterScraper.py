@@ -16,8 +16,8 @@ consumer_secret="YOUR CONSUMER SECRET"
  
 # After the step above, you will be redirected to your app's page.
 # Create an access token under the the "Your access token" section
-access_token="67271475-y4QNnALrD918v1Z4kKKOoTc6bvABtDz6LqdBlp0Pp"
-access_token_secret="tSz8Ly6gwsi2maaxTU3CTrr8XlhzTYWpox7z6Pxh52zOC"
+access_token="YOUR ACCESS TOKEN"
+access_token_secret="YOUR ACCESS TOKEN SECRET"
  
 auth = twitter.oauth.OAuth(access_token, access_token_secret,consumer_key, consumer_secret)
 twitter_api = twitter.Twitter(auth=auth)
