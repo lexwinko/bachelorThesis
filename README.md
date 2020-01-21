@@ -2,6 +2,7 @@
 
 ## Prerequisites
 > tested on ubuntu 18.04
+
 > Python 3
 
 ### textAnalyzer
