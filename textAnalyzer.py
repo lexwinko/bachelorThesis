@@ -15,59 +15,77 @@ import re
 from collections import Counter
 from nltk.util import ngrams
 
-hashtag = "None"
 
-def analyzeText(txt, family, lang):
+#	=================================================================
+#							formatText
+#
+#	INPUT:		any text
+#
+#	OUTPUT:		formatted text with unicode, spaces between letters/punctuation and abbreviations removed
+#	=================================================================	
+
+def formatText(text):
+	text = str(text)
+	text = text.replace("\\n", "  ")
+	text = text.replace("\ ", "")
+	text = text.replace("''", ' "')
+	text = text.replace("``", '"')
+	text = text.replace(" n'", "n'")
+	text = text.replace(" 'r", "'r")
+	text = text.replace("gon na", "gonna")
+	text = text.replace(" 'll", "'ll")
+	text = text.replace(" : )", ":)")
+	text = text.replace(" : - )", ":-)")
+	text = text.replace(" : ", ": ")
+	text = text.replace(" :/", ":/")
+	text = text.replace("? !", "?!")
+	text = text.replace("! ?", "!?")
+	text = text.replace("I '", "I'" )
+	text = text.replace(" 's", "'s")
+	text = text.replace ("& lt ;", "<")
+	text = text.replace("& gt ;", ">")
+	text = text.replace("& amp", "&")
+	text = text.replace(" # ", "#")
+	text = text.replace(" % ", "% ")
+	text = text.replace("**", "")
+	text = text.replace("\\'", "'")
+	text = text.replace("^^^", "")
+	text = text.replace("n\\", "n")
+	text = text.replace("p . s .", "p.s.")
+	text = techniques.removeUnicode(text)
+	#print(text)
+	return text
+
+
+
+#	=================================================================
+#							analyzeText
+#
+#	INPUT:		csv file with columns 'user' and 'post' and separated by ','
+#					opt-- language family for tagging (e.g. 'Balto-Slavic')
+#					opt-- native language for tagging (e.g. 'Polish')
+#
+#	OUTPUT:		csv file with text features
+#						+POS-tags
+#						+text length (not counting punctuation)
+#						+mean word length
+#						+elongation rate
+#						+language family
+#						+language
+#						+username
+#						+spelling delta (difference between corrected and original words e.g. helo vs. hello)
+#						+character 3-grams
+#	=================================================================	
+
+def analyzeText(file, family='none', lang='none'):
 	txt_Raw = []
 	txt_English = []
 	txt_Occurence = {}
-	#with open(txt, newline='') as csvFile:
-	#	csvReader = csv.reader(csvFile, delimiter=';')
-	#	for row in csvReader:
-	#		txt_Raw.append((" ".join(row)).replace('\n', " "))
-	txt_Import = pd.read_csv(txt+".csv", header=0,  sep=',', usecols=['user','post'])
-	#print(txt_Import)
-	for text in txt_Import['post'].values:
-		#print(text)
-		text = str(text)
-		text = text.replace("\\n", "  ")
-		text = text.replace("\ ", "")
-		text = text.replace("''", ' "')
-		text = text.replace("``", '"')
-		#text = text.replace(' "', '"')
-		text = text.replace(" n'", "n'")
-		text = text.replace(" 'r", "'r")
-		text = text.replace("gon na", "gonna")
-		text = text.replace(" 'll", "'ll")
-		text = text.replace(" : ", ":")
-		text = text.replace(" :/", ":/")
-		text = text.replace("I '", "I'" )
-		text = text.replace(" 's", "'s")
-		text = text.replace ("& lt ;", "<")
-		text = text.replace("& gt ;", ">")
-		text = text.replace("& amp", "&")
-		text = text.replace(" # ", "#")
-		text = text.replace(" % ", "% ")
-		text = text.replace("**", "")
-		text = text.replace("\\'", "'")
-		text = text.replace("^^^", "")
-		text = text.replace("n\\", "n")
-		text = techniques.removeUnicode(text)
 
-		#print(text)
-		#decoded = text
-		#try:
-		#	decoded = text.encode('utf-8','surrogateescape').decode('unicode-escape', 'surrogateescape')
-		#except:
-		#	continue
-		#print(decoded)
-		txt_Raw.append(text)
-	#counter = 0
-	#with open("txtRaw_"+hashtag+".txt", "a") as result:
-	#	for x in txt_Raw:
-	#		result.write(str(counter)+"\t"+x+"\t"+" \n")
-	#		counter = counter + 1
-	#print(txt_Raw)
+	txt_Import = pd.read_csv(file, header=0,  sep=',', usecols=['user','post'])
+
+	for text in txt_Import['post'].values:
+		txt_Raw.append(formatText(text))
 
 	for text in txt_Raw:
 		if(Text(text).language.name == "English"):
@@ -204,12 +222,17 @@ def analyzeText(txt, family, lang):
 	        w.writerow(txt_Occurence[k])
 	return txt_Occurence
 
+
 if __name__ == "__main__":
-	hashtag = sys.argv[1].split('.')[0]
+	file = sys.argv[1]
+	family = 'none'
+	lang = 'none'
+	if(len(sys.argv) > 2):
+		family = sys.argv[2]
+	if(len(sys.argv) > 3):
+		lang = sys.argv[3]
 	
-	family = sys.argv[2]
-	lang = sys.argv[3]
-	print('Running '+ hashtag + ', '+family+', '+lang)
-	result = analyzeText(hashtag, family, lang)
+	print('Running '+ file + ', '+family+', '+lang)
+	result = analyzeText(file, family, lang)
 	print('Done')
 	#print(result)
