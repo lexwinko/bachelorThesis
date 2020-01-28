@@ -56,6 +56,83 @@ def formatText(text):
 	#print(text)
 	return text
 
+#	=================================================================
+#							isLanguage
+#
+#	INPUT:		any string
+#					opt-- language
+#
+#	OUTPUT:		boolean check for given language (default is 'English')
+#	=================================================================	
+
+
+def isLanguage(text, language='English'):
+	return Text(text).language.name == language
+
+#	=================================================================
+#							runPOSTagger
+#
+#	INPUT:		any string or list of strings
+#
+#	OUTPUT:		list of POS tags for given string(s)
+#	=================================================================	
+
+def runPOSTagger(text):
+	return CMUTweetTagger.runtagger_parse(text)
+
+#	=================================================================
+#							extractFeatures
+#
+#	INPUT:		any string
+#					opt-- language array (abbreviation and specification e.g. 'en' and 'en-US')
+#
+#	OUTPUT:		list of features
+#					+elongated word count
+#					+text length (not counting punctuation)
+#					+mean word length
+#					+spelling delta (difference between corrected and original words e.g. helo vs. hello)
+#	=================================================================	
+
+def extractFeatures(text, lang=['en','en-US']):
+	countElongated = techniques.countElongated(text)
+	sentenceWords = techniques.words(text)
+	sentence = ' '.join(sentenceWords)
+	
+
+
+	s = aspell.Speller('lang', lang[0])
+	lang_tool = language_check.LanguageTool(lang[1])
+
+	aspellDelta = []
+	for word in sentenceWords:
+		suggest = s.suggest(word)
+		if(len(suggest) > 0):
+			suggest = suggest[0]
+		else:
+			suggest = word
+		aspellDelta.append(ls.distance(word, suggest))
+	
+	langCheckDelta = []
+	correctedSentence = techniques.words(language_check.correct(sentence, lang_tool.check(sentence)))
+	word = 0
+	while word < min(len(correctedSentence), len(sentenceWords)):
+		langCheckDelta.append(ls.distance(correctedSentence[word], sentenceWords[word]))
+		word += 1
+
+	aspellDelta = sum(aspellDelta) / len(aspellDelta)
+	langCheckDelta = sum(langCheckDelta) / len(langCheckDelta)
+	sentenceSpellDelta = (aspellDelta + langCheckDelta) / 2.0
+
+	sentence = ' '.join(correctedSentence)
+	sentenceLength = len(correctedSentence)
+	sentenceWordLength = sum(map(len, [x for x in correctedSentence])) / sentenceLength
+
+
+	print(sentence)
+	sentenceCharNGrams = Counter(ngrams(sentence, 3))
+	print(sentenceCharNGrams)
+
+	return {'elongated' : countElongated, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta}
 
 
 #	=================================================================
@@ -78,78 +155,36 @@ def formatText(text):
 #	=================================================================	
 
 def analyzeText(file, family='none', lang='none'):
-	txt_Raw = []
-	txt_English = []
+	#txt_Raw = []
+	filteredText = []
 	txt_Occurence = {}
 
-	txt_Import = pd.read_csv(file, header=0,  sep=',', usecols=['user','post'])
+	txt_Import = pd.read_csv(file, header=0,  nrows=10, sep=',', usecols=['user','post'])
 
 	for text in txt_Import['post'].values:
-		txt_Raw.append(formatText(text))
+		#txt_Raw.append(formatText(text))
+		text = formatText(text)
+		if(isLanguage(text, 'English')):
+			filteredText.append(text)
 
-	for text in txt_Raw:
-		if(Text(text).language.name == "English"):
-			txt_English.append(text)
+	for text in filteredText:
+		extractFeatures(text)
 
-
-	s = aspell.Speller('lang', 'en')
-	lang_tool = language_check.LanguageTool('en-US')
-
-
-	txt_POSTagged = CMUTweetTagger.runtagger_parse(txt_English)
 	
-	#with open("resultAnalyzingPOS.csv", "w") as f:
-	#	for x in txt_POSTagged:
-	#		#print(x)
-	#		for y in x:
-	#			f.write(y[0]+";"+y[1]+";"+str(y[2])+"\n")
+
+
+	text_POS = runPOSTagger(filteredText)
+	
+
 	num_tweet = 0
 	for i in txt_POSTagged:
 		if(num_tweet < len(txt_English)):
-			#print(len(txt_English), num_tweet, len(txt_POSTagged))
-			#print(str(num_tweet) + ' / ' + str(len(txt_POSTagged)))
 			txt_Occurence[num_tweet] = {'len':0, 'wordlen':0, '#':0, '@':0, 'E':0, ',':0, '~':0, 'U':0, 'A':0, 'D':0, '!':0, 'N':0, 'P':0, 'O':0, 'R':0, '&':0, 'L':0, 'Z':0, '^':0, 'V':0, '$':0, 'G':0, 'T':0, 'X':0, 'S':0, 'Y':0, 'M':0 ,'elong':0, 'langFam': family, 'lang': lang, 'user':" ", 'spellDelta':0, 'ngrams':[]}
 			txt_Occurence[num_tweet]['langFam'] = family
-			txt_Occurence[num_tweet]['lang'] = lang
-			txt_Occurence[num_tweet]['elong'] = techniques.countElongated(txt_English[num_tweet])
-			#txt_Occurence[num_tweet]['spellDelta'] = []
 			txt_Occurence[num_tweet]['user'] = txt_Import.at[num_tweet, 'user']
-			txt_Occurence[num_tweet]['len'] = len(techniques.words(txt_English[num_tweet]))
-			#print(txt_Occurence[num_tweet]['len'])
 
 			spellDeltaASPELL = []
 			spellDeltaLANGCHECK = []
-
-			for word in i:
-				if(word[1] is not ',' and word[1] is not 'U' and word[1] is not 'E' and word[1] is not 'G' and word[1] is not '$' and word[1] is not '#' and word[1] is not '@'):
-					suggest = s.suggest(word[0])
-					if(len(suggest) > 0):
-						suggest = suggest[0]
-					else:
-						suggest = word[0]
-					#print(word[0], word[1], suggest)
-					#txt_Occurence[num_tweet]['spellDelta'].append(ls.distance(word[0], suggest))
-					spellDeltaASPELL.append(ls.distance(word[0], suggest))
-
-			fixedSentence = txt_English[num_tweet]
-			sentenceMatches = lang_tool.check(fixedSentence)
-			#print(sentenceMatches)
-			language_check.correct(fixedSentence, sentenceMatches)
-			num_word = 0
-			#for words in fixedSentence.split(' '):
-			for word in i:
-				if(num_word < len(fixedSentence.split(' '))):
-					#print(fixedSentence.split(' ')[num_word], txt_English[num_tweet].split(' ')[num_word])
-					if(word[1] is not ',' and word[1] is not 'U' and word[1] is not 'E' and word[1] is not 'G' and word[1] is not '$' and word[1] is not '#' and [1] is not '@'):
-					#print(word, txt_English[num_tweet].split(' ')[num_word], )
-						spellDeltaLANGCHECK.append(ls.distance(fixedSentence.split(' ')[num_word], txt_English[num_tweet].split(' ')[num_word]))
-					num_word = num_word + 1
-			#print(txt_Occurence[num_tweet]['spellDelta'])
-
-			#print(spellDeltaLANGCHECK, spellDeltaASPELL)
-
-			txt_Occurence[num_tweet]['spellDelta'] = np.sum(np.add(spellDeltaLANGCHECK[:len(spellDeltaASPELL)], spellDeltaASPELL[:len(spellDeltaLANGCHECK)])/ ((len(spellDeltaASPELL) + len(spellDeltaLANGCHECK)) / 2))
-
 			
 			sum_wordlen = 0 
 			for j in i:

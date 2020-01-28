@@ -5,6 +5,8 @@
 
 > Python 3
 
+> openjdk-8-jre
+
 ### textAnalyzer
 [ark-tweet-nlp](http://www.cs.cmu.edu/~ark/TweetNLP/)
 
