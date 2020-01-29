@@ -143,6 +143,7 @@ def extractFeatures(text, lang=['en','en-US']):
 #	INPUT:		csv file with columns 'user' and 'post' and separated by ','
 #					opt-- language family for tagging (e.g. 'Balto-Slavic')
 #					opt-- native language for tagging (e.g. 'Polish')
+#					opt-- limit number of imported rows
 #
 #	OUTPUT:		csv file with text features
 #						+POS-tags
@@ -157,9 +158,12 @@ def extractFeatures(text, lang=['en','en-US']):
 #						+word 2-grams
 #	=================================================================	
 
-def analyzeText(file, family='none', lang='none'):
+def analyzeText(file, family='none', lang='none', limit='none'):
 	textFiltered = []
-	textImported = pd.read_csv(file, header=0,  nrows=10, sep=',', usecols=['user','post'])
+	if(limit == 'none'):
+		textImported = pd.read_csv(file, header=0, sep=',', usecols=['user','post'])
+	else
+		textImported = pd.read_csv(file, header=0, nrows=limit, sep=',', usecols=['user','post'])
 
 	for text in textImported['post'].values:
 		text = formatText(text)
@@ -221,11 +225,14 @@ if __name__ == "__main__":
 	file = sys.argv[1]
 	family = 'none'
 	lang = 'none'
+	limit = 'none'
 	if(len(sys.argv) > 2):
 		family = sys.argv[2]
 	if(len(sys.argv) > 3):
 		lang = sys.argv[3]
+	if(len(sys.argv) > 4):
+		limit = sys.argv[4]
 	
-	print('Running '+ file + ', '+family+', '+lang)
-	result = analyzeText(file, family, lang)
+	print('Running '+ file + ', '+family+', '+lang+', '+limit)
+	result = analyzeText(file, family, lang, limit)
 	print('Done')
