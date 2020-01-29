@@ -162,27 +162,29 @@ def analyzeText(file, family='none', lang='none', limit='none'):
 	textFiltered = []
 	if(limit == 'none'):
 		textImported = pd.read_csv(file, header=0, sep=',', usecols=['user','post'])
-	else
-		textImported = pd.read_csv(file, header=0, nrows=limit, sep=',', usecols=['user','post'])
+	else:
+		textImported = pd.read_csv(file, header=0, nrows=int(limit), sep=',', usecols=['user','post'])
 
-	for text in textImported['post'].values:
-		text = formatText(text)
+	num_row = 0
+	while num_row < len(textImported):
+		text = formatText(textImported.at[num_row, 'post'])
 		if(isLanguage(text, 'English')):
-			textFiltered.append([extractFeatures(text)])
+			textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user':textImported.at[num_row, 'user']}])
+		num_row += 1
+
 
 	text_POS = runPOSTagger(text[0]['correctedSentence'] for text in textFiltered)
 
 	num_tweet = 0
-	while num_tweet < len(textImported):
+	while num_tweet < len(textFiltered):
 		textFiltered[num_tweet].append({'#':0, '@':0, 'E':0, ',':0, '~':0, 'U':0, 'A':0, 'D':0, '!':0, 'N':0, 'P':0, 'O':0, 'R':0, '&':0, 'L':0, 'Z':0, '^':0, 'V':0, '$':0, 'G':0, 'T':0, 'X':0, 'S':0, 'Y':0, 'M':0 })
-		textFiltered[num_tweet].append({'langFam': family, 'lang': lang, 'user':textImported.at[num_tweet, 'user']})
 
 		for tag in text_POS[num_tweet]:
 			key = tag[1]
-			if key in textFiltered[num_tweet][1]:
-				textFiltered[num_tweet][1][key] += 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
+			if key in textFiltered[num_tweet][2]:
+				textFiltered[num_tweet][2][key] += 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
 			else:
-				textFiltered[num_tweet][1][key] = 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
+				textFiltered[num_tweet][2][key] = 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
 
 		num_tweet += 1
 
