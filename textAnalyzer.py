@@ -86,11 +86,14 @@ def runPOSTagger(text):
 #	INPUT:		any string
 #					opt-- language array (abbreviation and specification e.g. 'en' and 'en-US')
 #
-#	OUTPUT:		list of features
+#	OUTPUT:		dict of features
+#					+corrected sentence
 #					+elongated word count
 #					+text length (not counting punctuation)
 #					+mean word length
 #					+spelling delta (difference between corrected and original words e.g. helo vs. hello)
+#					+char 3grams
+#					+word 2grams
 #	=================================================================	
 
 def extractFeatures(text, lang=['en','en-US']):
@@ -128,11 +131,10 @@ def extractFeatures(text, lang=['en','en-US']):
 	sentenceWordLength = sum(map(len, [x for x in correctedSentence])) / sentenceLength
 
 
-	print(sentence)
-	sentenceCharNGrams = Counter(ngrams(sentence, 3))
-	print(sentenceCharNGrams)
+	sentenceCharNGrams = Counter(ngrams(sentence, 3)).most_common(5)
+	sentenceWordNGrams = Counter(ngrams(sentenceWords, 2)).most_common(5)
 
-	return {'elongated' : countElongated, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta}
+	return {'correctedSentence': sentence,'elongated' : countElongated, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charNGrams':sentenceCharNGrams, 'wordNGrams': sentenceWordNGrams}
 
 
 #	=================================================================
@@ -152,74 +154,33 @@ def extractFeatures(text, lang=['en','en-US']):
 #						+username
 #						+spelling delta (difference between corrected and original words e.g. helo vs. hello)
 #						+character 3-grams
+#						+word 2-grams
 #	=================================================================	
 
 def analyzeText(file, family='none', lang='none'):
-	#txt_Raw = []
-	filteredText = []
-	txt_Occurence = {}
+	textFiltered = []
+	textImported = pd.read_csv(file, header=0,  nrows=10, sep=',', usecols=['user','post'])
 
-	txt_Import = pd.read_csv(file, header=0,  nrows=10, sep=',', usecols=['user','post'])
-
-	for text in txt_Import['post'].values:
-		#txt_Raw.append(formatText(text))
+	for text in textImported['post'].values:
 		text = formatText(text)
 		if(isLanguage(text, 'English')):
-			filteredText.append(text)
+			textFiltered.append([extractFeatures(text)])
 
-	for text in filteredText:
-		extractFeatures(text)
-
-	
-
-
-	text_POS = runPOSTagger(filteredText)
-	
+	text_POS = runPOSTagger(text[0]['correctedSentence'] for text in textFiltered)
 
 	num_tweet = 0
-	for i in txt_POSTagged:
-		if(num_tweet < len(txt_English)):
-			txt_Occurence[num_tweet] = {'len':0, 'wordlen':0, '#':0, '@':0, 'E':0, ',':0, '~':0, 'U':0, 'A':0, 'D':0, '!':0, 'N':0, 'P':0, 'O':0, 'R':0, '&':0, 'L':0, 'Z':0, '^':0, 'V':0, '$':0, 'G':0, 'T':0, 'X':0, 'S':0, 'Y':0, 'M':0 ,'elong':0, 'langFam': family, 'lang': lang, 'user':" ", 'spellDelta':0, 'ngrams':[]}
-			txt_Occurence[num_tweet]['langFam'] = family
-			txt_Occurence[num_tweet]['user'] = txt_Import.at[num_tweet, 'user']
+	while num_tweet < len(textImported):
+		textFiltered[num_tweet].append({'#':0, '@':0, 'E':0, ',':0, '~':0, 'U':0, 'A':0, 'D':0, '!':0, 'N':0, 'P':0, 'O':0, 'R':0, '&':0, 'L':0, 'Z':0, '^':0, 'V':0, '$':0, 'G':0, 'T':0, 'X':0, 'S':0, 'Y':0, 'M':0 })
+		textFiltered[num_tweet].append({'langFam': family, 'lang': lang, 'user':textImported.at[num_tweet, 'user']})
 
-			spellDeltaASPELL = []
-			spellDeltaLANGCHECK = []
-			
-			sum_wordlen = 0 
-			for j in i:
-				txt_Occurence[num_tweet]['wordlen'] = txt_Occurence[num_tweet]['wordlen'] + len(j[0])
-				sum_wordlen = sum_wordlen + len(j[0])
-				key = j[1]
-				if key in txt_Occurence[num_tweet]:
-					txt_Occurence[num_tweet][key] = txt_Occurence[num_tweet][key] + 1
-					#if 'len' in txt_Occurence[num_tweet]:
-					#	if key is not ",":
-					#		txt_Occurence[num_tweet]['len'] = txt_Occurence[num_tweet]['len'] + 1
-					#else:
-					#	txt_Occurence[num_tweet]['len'] = 1
-				else:
-					txt_Occurence[num_tweet][key] = 1
+		for tag in text_POS[num_tweet]:
+			key = tag[1]
+			if key in textFiltered[num_tweet][1]:
+				textFiltered[num_tweet][1][key] += 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
+			else:
+				textFiltered[num_tweet][1][key] = 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
 
-
-			characterNGram = txt_English[num_tweet].lower().split()
-			#characterNGram = re.sub(r'[^a-zA-Z0-9\s]', '', characterNGram)
-			char3Gram_count = Counter(ngrams(characterNGram, 2))
-			txt_Occurence[num_tweet]['ngrams'] = char3Gram_count.most_common(5)
-
-
-			num_tweet = num_tweet + 1
-
-			
-
-	for x in txt_Occurence:
-		#print(txt_Occurence[x])
-		for z in txt_Occurence[x]:
-			if not(z == 'lang' or z == 'langFam' or z == 'len' or z == 'user' or z == 'spellDelta' or z == 'ngrams' or z == 'wordlen'): 
-				txt_Occurence[x][z] = (txt_Occurence[x][z] / max(1,txt_Occurence[x]['len'])) * 100
-			elif(z == 'wordlen'):
-				txt_Occurence[x][z] = (txt_Occurence[x][z] / sum_wordlen)
-			#print(x,z,txt_Occurence[x][z])
+		num_tweet += 1
 
 	#	N : Common Noun
 	#	O : Pronoun
@@ -246,16 +207,14 @@ def analyzeText(file, family='none', lang='none'):
 	#	$ : numeral
 	#	, : punctuation
 	#	G : other abbreviations, foreign words, possessive endings, symbols, garbage
-	fields = [ 'len', 'wordlen', '#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'elong', 'langFam', 'lang', 'user', 'spellDelta', 'ngrams']
-	#print(txt_Occurence)
-	with open('result'+txt+ '.csv', "w") as f:
-	    w = csv.DictWriter(f, fields)
-	    w.writeheader()
-	    for k in txt_Occurence:
-	        #print(txt_Occurence[k])
-	        #w.writerow({field: txt_Occurence[k].get(field) or k for field in fields})
-	        w.writerow(txt_Occurence[k])
-	return txt_Occurence
+
+	fields = [ 'correctedSentence','elongated','sentenceLength','sentenceWordLength','spellDelta','charNGrams','wordNGrams','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
+	with open('result'+file.split('/')[-1].split('.')[1]+file.split('/')[-1].split('.')[3]+ '.csv', "w") as f:
+		w = csv.DictWriter(f, fields)
+		w.writeheader()
+		for output in textFiltered:
+			flatList = {**output[0], **output[1], **output[2]}
+			w.writerow(flatList)
 
 
 if __name__ == "__main__":
@@ -270,4 +229,3 @@ if __name__ == "__main__":
 	print('Running '+ file + ', '+family+', '+lang)
 	result = analyzeText(file, family, lang)
 	print('Done')
-	#print(result)
