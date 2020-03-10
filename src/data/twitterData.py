@@ -5,6 +5,7 @@ import os
 import csv
 import sys
 
+c_lang = "None"
 
 tweet_stream_turkey = {'ArtCul':{}, 'BuiTecSci':{}, 'SocSoc':{}, 'Pol':{} }
 tweet_search_turkey = {'ArtCul' : ["#SezenAksu", "#Cemre", "#BugünGünlerdenGALATASARAY", "#BugünGünlerdenTrabzonspor"],
@@ -73,7 +74,7 @@ def filter_text(txt):
 			len_raw += 1
 			if(Text(tweet.text).language.name == 'English'):
 				len_filtered += 1
-				ret_list[hashtag]['data'].append(tweet.text)
+				ret_list[hashtag]['data'].append([tweet.text,tweet.url])
 		ret_list[hashtag]['len_raw'] = len_raw
 		ret_list[hashtag]['len_filtered'] = len_filtered
 	return ret_list
@@ -97,46 +98,49 @@ def save_to_file(txt):
 			filename = cat + '/' + hashtag + '.csv'
 			os.makedirs(os.path.dirname(filename), exist_ok=True)
 			with open(filename, "w", encoding='utf-8') as f:
-				w = csv.DictWriter(f, ['text'])
+				w = csv.DictWriter(f, ['text','url','lang'])
 				w.writeheader()
 				for line in txt[cat][hashtag]['data']:
-					w.writerow({'text': line})
+					w.writerow({'text': line[0], 'url': line[1], 'lang': c_lang})
 
 
 if __name__ == "__main__":
 	hashtag_file = ""
 	data_file = ""
-	if(sys.argv[1] == 'turkey'):
+	c_lang = sys.argv[1]
+	if(c_lang == 'turkish'):
 		hashtag_file = tweet_search_turkey
 		data_file = tweet_stream_turkey
-	elif(sys.argv[1] == 'france'):
+	elif(c_lang == 'french'):
 		hashtag_file = tweet_search_france
 		data_file = tweet_stream_france
-	elif(sys.argv[1] == 'greece'):
+	elif(c_lang == 'greek'):
 		hashtag_file = tweet_search_greece
 		data_file = tweet_stream_greece
-	elif(sys.argv[1] == 'germany'):
+	elif(c_lang == 'german'):
 		hashtag_file = tweet_search_germany
 		data_file = tweet_stream_germany
-	elif(sys.argv[1] == 'russia'):
+	elif(c_lang == 'russian'):
 		hashtag_file = tweet_search_russia
 		data_file = tweet_stream_russia
-	elif(sys.argv[1] == 'japan'):
+	elif(c_lang == 'japanese'):
 		hashtag_file = tweet_search_japan
 		data_file = tweet_stream_japan
-	elif(sys.argv[1] == 'india'):
+	elif(c_lang == 'indian'):
 		hashtag_file = tweet_search_india
 		data_file = tweet_stream_india
-	elif(sys.argv[1] == 'native'):
+	elif(c_lang == 'english'):
 		hashtag_file = tweet_search_native
 		data_file = tweet_stream_native
-	elif(sys.argv[1] == 'worldwide'):
+	elif(c_lang == 'international'):
 		hashtag_file = tweet_search_worldwide
 		data_file = tweet_stream_worldwide
+	else:
+		print("Enter valid language preset")
 
 	for cat in categories:
 		for hashtag in hashtag_file[cat]:
-			data_file[cat][hashtag] = nasty.Search(hashtag, lang="en").request()
+			data_file[cat][hashtag] = nasty.Search(hashtag, lang="en", max_tweets=1000).request()
 		data_file[cat] = filter_text(data_file[cat])
 	save_to_file(data_file)
 
