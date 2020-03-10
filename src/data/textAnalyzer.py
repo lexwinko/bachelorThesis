@@ -97,11 +97,16 @@ def runPOSTagger(text):
 #	=================================================================	
 
 def extractFeatures(text, lang=['en','en-US']):
+	
+	hashtags = techniques.extractHashtags(text)
+	urls = techniques.extractURL(text)
+	text = techniques.removeHashtags(text)
+	text = techniques.replaceURL(text, '')
+	
 	countElongated = techniques.countElongated(text)
 	sentenceWords = techniques.words(text)
 	sentence = ' '.join(sentenceWords)
 	
-
 
 	s = aspell.Speller('lang', lang[0])
 	lang_tool = language_check.LanguageTool(lang[1])
@@ -114,6 +119,9 @@ def extractFeatures(text, lang=['en','en-US']):
 		else:
 			suggest = word
 		aspellDelta.append(ls.distance(word, suggest))
+
+
+	
 	
 	langCheckDelta = []
 	correctedSentence = techniques.words(language_check.correct(sentence, lang_tool.check(sentence)))
@@ -134,7 +142,7 @@ def extractFeatures(text, lang=['en','en-US']):
 	sentenceCharNGrams = Counter(ngrams(sentence, 3)).most_common(5)
 	sentenceWordNGrams = Counter(ngrams(sentenceWords, 2)).most_common(5)
 
-	return {'correctedSentence': sentence,'elongated' : countElongated, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charNGrams':sentenceCharNGrams, 'wordNGrams': sentenceWordNGrams}
+	return {'correctedSentence': sentence,'elongated' : countElongated, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charNGrams':sentenceCharNGrams, 'wordNGrams': sentenceWordNGrams, 'url': urls, 'hashtag': hashtags}
 
 
 #	=================================================================
@@ -158,18 +166,34 @@ def extractFeatures(text, lang=['en','en-US']):
 #						+word 2-grams
 #	=================================================================	
 
-def analyzeText(file, family='none', lang='none', limit='none'):
+def analyzeText(file, filetype, family='none', lang='none', limit='none'):
 	textFiltered = []
-	if(limit == 'none'):
-		textImported = pd.read_csv(file, header=0, sep=',', usecols=['user','post'])
+	textImported = []
+	textUser = []
+	textPost = []
+	if(filetype == 'reddit'):
+		if(limit == 'none'):
+			textImported = pd.read_csv(file, header=0, sep=',', usecols=['user','post'])
+		else:
+			textImported = pd.read_csv(file, header=0, nrows=int(limit), sep=',', usecols=['user','post'])
 	else:
-		textImported = pd.read_csv(file, header=0, nrows=int(limit), sep=',', usecols=['user','post'])
-
-	num_row = 0
+		if(limit == 'none'):
+			textImported = pd.read_csv(file, header=0, sep=',', usecols=['text'])
+		else:
+			textImported = pd.read_csv(file, header=0, nrows=int(limit), sep=',', usecols=['text'])
+	num_row = 0	
+	
 	while num_row < len(textImported):
-		text = formatText(textImported.at[num_row, 'post'])
+		if(filetype == 'reddit'): 
+			textPost = textImported.at[num_row, 'post']
+			textUser = textImported.at[num_row, 'user']
+		else:
+			textPost = textImported.at[num_row, 'text']
+			textUser = " "
+
+		text = formatText(textPost)
 		if(isLanguage(text, 'English')):
-			textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user':textImported.at[num_row, 'user']}])
+			textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user': textUser}])
 		num_row += 1
 
 	text_POS = runPOSTagger(text[0]['correctedSentence'] for text in textFiltered)
@@ -185,6 +209,9 @@ def analyzeText(file, family='none', lang='none', limit='none'):
 			else:
 				textFiltered[num_tweet][2][key] = 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
 
+
+		textFiltered[num_tweet][2]['#'] = len(textFiltered[num_tweet][0]['hashtag'])
+		textFiltered[num_tweet][2]['U'] = len(textFiltered[num_tweet][0]['url'])
 		num_tweet += 1
 
 	#	N : Common Noun
@@ -213,10 +240,13 @@ def analyzeText(file, family='none', lang='none', limit='none'):
 	#	, : punctuation
 	#	G : other abbreviations, foreign words, possessive endings, symbols, garbage
 
-	fields = [ 'correctedSentence','elongated','sentenceLength','sentenceWordLength','spellDelta','charNGrams','wordNGrams','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
-	filname = 'output/result'+file.split('/')[-1].split('.')[1]+file.split('/')[-1].split('.')[3]+ '.csv'
-	os.makedirs(os.path.dirname(filname), exist_ok=True)
-	with open(filname, "w") as f:
+	fields = [ 'correctedSentence','elongated','sentenceLength','sentenceWordLength','spellDelta','charNGrams','wordNGrams','hashtag','url','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
+	if(filetype == 'reddit'):
+		filename = 'output/result'+file.split('/')[-1].split('.')[1]+file.split('/')[-1].split('.')[3]+ '.csv'
+	else:
+		filename = 'output/result.csv'
+	os.makedirs(os.path.dirname(filename), exist_ok=True)
+	with open(filename, "w") as f:
 		w = csv.DictWriter(f, fields)
 		w.writeheader()
 		for output in textFiltered:
@@ -226,16 +256,17 @@ def analyzeText(file, family='none', lang='none', limit='none'):
 
 if __name__ == "__main__":
 	file = sys.argv[1]
+	filetype = sys.argv[2]
 	family = 'none'
 	lang = 'none'
 	limit = 'none'
-	if(len(sys.argv) > 2):
-		family = sys.argv[2]
 	if(len(sys.argv) > 3):
-		lang = sys.argv[3]
+		family = sys.argv[3]
 	if(len(sys.argv) > 4):
-		limit = sys.argv[4]
+		lang = sys.argv[4]
+	if(len(sys.argv) > 5):
+		limit = sys.argv[5]
 	
 	print('Running '+ file + ', '+family+', '+lang+', '+limit)
-	result = analyzeText(file, family, lang, limit)
+	result = analyzeText(file, filetype, family, lang, limit)
 	print('Done')

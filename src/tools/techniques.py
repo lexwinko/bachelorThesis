@@ -15,21 +15,33 @@ def removeUnicode(text):
     text = re.sub(r'[^\x00-\x7f]',r'',text)
     return text
 
-def replaceURL(text):
+def replaceURL(text, replace):
     """ Replaces url address with "url" """
-    text = re.sub('((www\.[^\s]+)|(https?://[^\s]+))','url',text)
+    text = re.sub('((www\.[^\s]+)|(https?://[^\s]+))',replace,text)
     text = re.sub(r'#([^\s]+)', r'\1', text)
     return text
+
+def extractURL(text):
+    urls = re.findall(r'(https?://\S+)', text)
+    return urls
 
 def replaceAtUser(text):
     """ Replaces "@user" with "atUser" """
     text = re.sub('@[^\s]+','atUser',text)
     return text
 
-def removeHashtagInFrontOfWord(text):
+def replaceHashtags(text,replace):
     """ Removes hastag in front of a word """
-    text = re.sub(r'#([^\s]+)', r'\1', text)
+    text = re.sub(r'#(\w+) ', replace, text)
     return text
+
+def removeHashtags(text):
+    text = re.sub(r'(\s)#\w+', r'\1', text)
+    return text
+
+def extractHashtags(text):
+    hashtags = re.findall(r"#(\w+)", text)
+    return hashtags
 
 def removeNumbers(text):
     """ Removes integers """
