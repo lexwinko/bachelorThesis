@@ -29,7 +29,7 @@ tweet_stream_germany = {'ArtCul':{}, 'BuiTecSci':{}, 'SocSoc':{}, 'Pol':{} }
 tweet_search_germany = 		{	'ArtCul': ["#AUTGER", "#DerSchwarzeSchwan"],
 							'BuiTecSci': ["#spiegelonline", "#BahnCard"],
 							'SocSoc': ["#Umweltsau","#Weltknuddeltag"],
-							'Pol' :["#Sterbehilfe","#Bauernproteste", "dieUhrtickt"] }
+							'Pol' :["#Sterbehilfe","#Bauernproteste", "#dieUhrtickt"] }
 
 tweet_stream_russia = {'ArtCul':{}, 'BuiTecSci':{}, 'SocSoc':{}, 'Pol':{} }
 tweet_search_russia = 		{	'ArtCul': ["#BTSTOUR2020_Russia", "#Биатлон"],
