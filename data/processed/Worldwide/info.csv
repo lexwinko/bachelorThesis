@@ -1,5 +1,5 @@
 category,hashtag,len_raw,len_filtered,len_manualfilter
-ArtCul,#GameOfThrones,1000,1000,
+ArtCul,#GameOfThrones,1000,1000,200
 ArtCul,#BoyWithLuv,512,506,36
 BuiTecSci,#CES,1000,998,200
 BuiTecSci,#COVID2019,483,480,200
