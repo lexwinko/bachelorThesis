@@ -47,4 +47,6 @@ pip3 install "tensorflow==2.1.0"" sklearn ktrain
 
 ```
 pip3 install nasty
+pip3 install git+https://github.com/amaiya/eli5@tfkeras_0_10_1
+pip3 install git+https://github.com/amaiya/stellargraph@no_tf_dep_082
 ```
