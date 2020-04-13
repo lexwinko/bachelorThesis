@@ -7,6 +7,8 @@
 
 > openjdk-8-jre
 
+> update pip ```pip3 install -U pip```
+
 ### textAnalyzer
 [ark-tweet-nlp](http://www.cs.cmu.edu/~ark/TweetNLP/)
 
@@ -38,5 +40,13 @@ sudo python3 setup.py install
 ### textClassifier
 
 ```
-pip3 install tensorflow sklearn
+pip3 install "tensorflow==2.1.0"" sklearn ktrain
+```
+
+### twitterData
+
+```
+pip3 install nasty
+pip3 install git+https://github.com/amaiya/eli5@tfkeras_0_10_1
+pip3 install git+https://github.com/amaiya/stellargraph@no_tf_dep_082
 ```
