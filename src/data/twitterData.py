@@ -8,7 +8,7 @@ import sys
 c_lang = "None"
 
 tweet_stream_turkey = {'ArtCul':{}, 'BuiTecSci':{}, 'SocSoc':{}, 'Pol':{} }
-tweet_search_turkey = {'ArtCul' : ["#SezenAksu", "#Cemre", "#BugünGünlerdenGALATASARAY", "#BugünGünlerdenTrabzonspor"],
+tweet_search_turkey = {'ArtCul' : ["#Cemre", "#BugünGünlerdenGALATASARAY", "#BugünGünlerdenTrabzonspor"],
 						'BuiTecSci' : ["#Teknofest2019", "#coronaviruesue"],
 							'SocSoc' : ["#Perşembe","#salı"],
 							'Pol' : ["#BaharKalkanı","#DünyanınEnGüçlüOrdusuyuz"] }
