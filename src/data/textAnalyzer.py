@@ -12,6 +12,7 @@ import Levenshtein as ls
 import language_check
 import techniques
 import re
+import glob
 from collections import Counter
 from nltk.util import ngrams
 
@@ -44,6 +45,7 @@ def formatText(text):
 	text = text.replace(" 's", "'s")
 	text = text.replace ("& lt ;", "<")
 	text = text.replace("& gt ;", ">")
+	text = text.replace("&gt", ">")
 	text = text.replace("& amp", "&")
 	text = text.replace(" # ", "#")
 	text = text.replace(" % ", "% ")
@@ -100,12 +102,17 @@ def extractFeatures(text, lang=['en','en-US']):
 	
 	hashtags = techniques.extractHashtags(text)
 	urls = techniques.extractURL(text)
+	atUsers = techniques.extractAtUser(text)
 	text = techniques.removeHashtags(text)
+	text = techniques.removeAtUser(text)
 	text = techniques.replaceURL(text, '')
 	
 	countElongated = techniques.countElongated(text)
 	sentenceWords = techniques.words(text)
-	sentence = ' '.join(sentenceWords)
+	filteredSentence = ' '.join(sentenceWords)
+	originalText = text
+
+	countCaps = techniques.countAllCaps(text)
 	
 
 	s = aspell.Speller('lang', lang[0])
@@ -124,25 +131,25 @@ def extractFeatures(text, lang=['en','en-US']):
 	
 	
 	langCheckDelta = []
-	correctedSentence = techniques.words(language_check.correct(sentence, lang_tool.check(sentence)))
+	correctedSentence = techniques.words(language_check.correct(filteredSentence, lang_tool.check(filteredSentence)))
 	word = 0
 	while word < min(len(correctedSentence), len(sentenceWords)):
 		langCheckDelta.append(ls.distance(correctedSentence[word], sentenceWords[word]))
 		word += 1
 
-	aspellDelta = sum(aspellDelta) / len(aspellDelta)
-	langCheckDelta = sum(langCheckDelta) / len(langCheckDelta)
+	aspellDelta = sum(aspellDelta) / max(1,len(aspellDelta))
+	langCheckDelta = sum(langCheckDelta) / max(1,len(langCheckDelta))
 	sentenceSpellDelta = (aspellDelta + langCheckDelta) / 2.0
 
 	sentence = ' '.join(correctedSentence)
 	sentenceLength = len(correctedSentence)
-	sentenceWordLength = sum(map(len, [x for x in correctedSentence])) / sentenceLength
+	sentenceWordLength = sum(map(len, [x for x in correctedSentence])) / max(1,sentenceLength)
 
 
 	sentenceCharNGrams = Counter(ngrams(sentence, 3)).most_common(5)
 	sentenceWordNGrams = Counter(ngrams(sentenceWords, 2)).most_common(5)
 
-	return {'correctedSentence': sentence,'elongated' : countElongated, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charNGrams':sentenceCharNGrams, 'wordNGrams': sentenceWordNGrams, 'url': urls, 'hashtag': hashtags}
+	return {'correctedSentence': sentence, 'originalSentence': originalText, 'elongated' : countElongated, 'caps': countCaps, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charNGrams':sentenceCharNGrams, 'wordNGrams': sentenceWordNGrams, 'url': urls, 'hashtag': hashtags, 'atUser': atUsers}
 
 
 #	=================================================================
@@ -166,7 +173,7 @@ def extractFeatures(text, lang=['en','en-US']):
 #						+word 2-grams
 #	=================================================================	
 
-def analyzeText(file, filetype, family='none', lang='none', limit='none'):
+def analyzeText(file, filetype, family='none', lang='none', category='none', limit='none'):
 	textFiltered = []
 	textImported = []
 	textUser = []
@@ -178,9 +185,9 @@ def analyzeText(file, filetype, family='none', lang='none', limit='none'):
 			textImported = pd.read_csv(file, header=0, nrows=int(limit), sep=',', usecols=['user','post'])
 	else:
 		if(limit == 'none'):
-			textImported = pd.read_csv(file, header=0, sep=',', usecols=['text'])
+			textImported = pd.read_csv(file, header=0, sep=',', usecols=['text','lang'])
 		else:
-			textImported = pd.read_csv(file, header=0, nrows=int(limit), sep=',', usecols=['text'])
+			textImported = pd.read_csv(file, header=0, nrows=int(limit), sep=',', usecols=['text','lang'])
 	num_row = 0	
 	
 	while num_row < len(textImported):
@@ -190,18 +197,44 @@ def analyzeText(file, filetype, family='none', lang='none', limit='none'):
 		else:
 			textPost = textImported.at[num_row, 'text']
 			textUser = " "
+			if(textImported.at[num_row, 'lang'] == 'indian'):
+				lang = 'Indian'
+				family = 'Indo-Aryan'
+			elif(textImported.at[num_row, 'lang'] == 'german'):
+				lang = 'German'
+				family = 'Germanic'
+			elif(textImported.at[num_row, 'lang'] == 'french'):
+				lang = 'French'
+				family = 'Romance'
+			elif(textImported.at[num_row, 'lang'] == 'russian'):
+				lang = 'Russian'
+				family = 'Balto-Slavic'
+			elif(textImported.at[num_row, 'lang'] == 'turkish'):
+				lang = 'Turkish'
+				family = 'Turkic'
+			elif(textImported.at[num_row, 'lang'] == 'greek'):
+				lang = 'Greek'
+				family = 'Greek'
+			elif(textImported.at[num_row, 'lang'] == 'japanese'):
+				lang = 'Japanese'
+				family = 'Japonic'
+			else:
+				lang = 'English'
+				family = 'Germanic'
+
 
 		text = formatText(textPost)
-		if(isLanguage(text, 'English')):
-			textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user': textUser}])
+
+		textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user': textUser}])
 		num_row += 1
 
-	text_POS = runPOSTagger(text[0]['correctedSentence'] for text in textFiltered)
+	text_POS = runPOSTagger(text[0]['originalSentence'] for text in textFiltered)
+	textFiltered = textFiltered[:len(text_POS)]
+
 
 	num_tweet = 0
 	while num_tweet < len(textFiltered):
 		textFiltered[num_tweet].append({'#':0, '@':0, 'E':0, ',':0, '~':0, 'U':0, 'A':0, 'D':0, '!':0, 'N':0, 'P':0, 'O':0, 'R':0, '&':0, 'L':0, 'Z':0, '^':0, 'V':0, '$':0, 'G':0, 'T':0, 'X':0, 'S':0, 'Y':0, 'M':0 })
-
 		for tag in text_POS[num_tweet]:
 			key = tag[1]
 			if key in textFiltered[num_tweet][2]:
@@ -240,22 +273,11 @@ def analyzeText(file, filetype, family='none', lang='none', limit='none'):
 	#	, : punctuation
 	#	G : other abbreviations, foreign words, possessive endings, symbols, garbage
 
-	fields = [ 'correctedSentence','elongated','sentenceLength','sentenceWordLength','spellDelta','charNGrams','wordNGrams','hashtag','url','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
-	if(filetype == 'reddit'):
-		filename = 'output/result'+file.split('/')[-1].split('.')[1]+file.split('/')[-1].split('.')[3]+ '.csv'
-	else:
-		filename = 'output/result.csv'
-	os.makedirs(os.path.dirname(filename), exist_ok=True)
-	with open(filename, "w") as f:
-		w = csv.DictWriter(f, fields)
-		w.writeheader()
-		for output in textFiltered:
-			flatList = {**output[0], **output[1], **output[2]}
-			w.writerow(flatList)
+	return textFiltered
 
 
 if __name__ == "__main__":
-	file = sys.argv[1]
+	path = sys.argv[1]
 	filetype = sys.argv[2]
 	family = 'none'
 	lang = 'none'
@@ -265,8 +287,29 @@ if __name__ == "__main__":
 	if(len(sys.argv) > 4):
 		lang = sys.argv[4]
 	if(len(sys.argv) > 5):
-		limit = sys.argv[5]
+		category = sys.argv[5]
+	if(len(sys.argv) > 6):
+		limit = sys.argv[6]
 	
-	print('Running '+ file + ', '+family+', '+lang+', '+limit)
-	result = analyzeText(file, filetype, family, lang, limit)
+	files = glob.glob(path+'*.csv')
+	outputValues = []
+	for file in files:
+		print('Running '+ file + ', '+family+', '+lang+', '+limit)
+
+		outputValues.append(analyzeText(file, filetype, family, lang, category, limit))
+
+
+	fields = [ 'correctedSentence','originalSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charNGrams','wordNGrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
+	if(filetype == 'reddit'):
+		filename = 'output/result'+file.split('/')[-1].split('.')[1]+file.split('/')[-1].split('.')[3]+ '.csv'
+	else:
+		filename = 'output/result_'+lang+'_'+category+'.csv'
+	os.makedirs(os.path.dirname(filename), exist_ok=True)
+	with open(filename, "a") as f:
+		w = csv.DictWriter(f, fields)
+		w.writeheader()
+		for results in outputValues:
+			for output in results:
+				flatList = {**output[0], **output[1], **output[2]}
+				w.writerow(flatList)
 	print('Done')
