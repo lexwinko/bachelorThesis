@@ -30,13 +30,21 @@ def replaceAtUser(text):
     text = re.sub('@[^\s]+','atUser',text)
     return text
 
+def extractAtUser(text):
+    atUser = re.findall(r'@[^\s]+', text)
+    return atUser
+
+def removeAtUser(text):
+    text = re.sub(r'@\w+', r'', text)
+    return text
+
 def replaceHashtags(text,replace):
     """ Removes hastag in front of a word """
     text = re.sub(r'#(\w+) ', replace, text)
     return text
 
 def removeHashtags(text):
-    text = re.sub(r'(\s)#\w+', r'\1', text)
+    text = re.sub(r'#\w+', r'', text)
     return text
 
 def extractHashtags(text):
