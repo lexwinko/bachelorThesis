@@ -15,6 +15,7 @@ import re
 import glob
 from collections import Counter
 from nltk.util import ngrams
+from nltk.tokenize import RegexpTokenizer
 
 
 #	=================================================================
@@ -146,8 +147,12 @@ def extractFeatures(text, lang=['en','en-US']):
 	sentenceWordLength = sum(map(len, [x for x in correctedSentence])) / max(1,sentenceLength)
 
 
-	sentenceCharNGrams = Counter(ngrams(sentence, 3)).most_common(5)
-	sentenceWordNGrams = Counter(ngrams(sentenceWords, 2)).most_common(5)
+	tokenizer = RegexpTokenizer("[a-zA-Z]+")
+	tokenizedText = tokenizer.tokenize(originalText)
+	tokenizedChar = [c for c in ' '.join(tokenizedText)]
+
+	sentenceCharNGrams = [ ''.join(grams) for grams in ngrams(tokenizedChar, 3)]
+	sentenceWordNGrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 2)]
 
 	return {'correctedSentence': sentence, 'originalSentence': originalText, 'elongated' : countElongated, 'caps': countCaps, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charNGrams':sentenceCharNGrams, 'wordNGrams': sentenceWordNGrams, 'url': urls, 'hashtag': hashtags, 'atUser': atUsers}
 
@@ -231,22 +236,6 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 	text_POS = runPOSTagger(text[0]['originalSentence'] for text in textFiltered)
 	textFiltered = textFiltered[:len(text_POS)]
 
-
-	num_tweet = 0
-	while num_tweet < len(textFiltered):
-		textFiltered[num_tweet].append({'#':0, '@':0, 'E':0, ',':0, '~':0, 'U':0, 'A':0, 'D':0, '!':0, 'N':0, 'P':0, 'O':0, 'R':0, '&':0, 'L':0, 'Z':0, '^':0, 'V':0, '$':0, 'G':0, 'T':0, 'X':0, 'S':0, 'Y':0, 'M':0 })
-		for tag in text_POS[num_tweet]:
-			key = tag[1]
-			if key in textFiltered[num_tweet][2]:
-				textFiltered[num_tweet][2][key] += 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
-			else:
-				textFiltered[num_tweet][2][key] = 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
-
-
-		textFiltered[num_tweet][2]['#'] = len(textFiltered[num_tweet][0]['hashtag'])
-		textFiltered[num_tweet][2]['U'] = len(textFiltered[num_tweet][0]['url'])
-		num_tweet += 1
-
 	#	N : Common Noun
 	#	O : Pronoun
 	#	S : nominal + possessive
@@ -272,6 +261,23 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 	#	$ : numeral
 	#	, : punctuation
 	#	G : other abbreviations, foreign words, possessive endings, symbols, garbage
+
+	num_tweet = 0
+	while num_tweet < len(textFiltered):
+		textFiltered[num_tweet].append({'#':0, '@':0, 'E':0, ',':0, '~':0, 'U':0, 'A':0, 'D':0, '!':0, 'N':0, 'P':0, 'O':0, 'R':0, '&':0, 'L':0, 'Z':0, '^':0, 'V':0, '$':0, 'G':0, 'T':0, 'X':0, 'S':0, 'Y':0, 'M':0 })
+		for tag in text_POS[num_tweet]:
+			key = tag[1]
+			if key in textFiltered[num_tweet][2]:
+				textFiltered[num_tweet][2][key] += 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
+			else:
+				textFiltered[num_tweet][2][key] = 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
+
+
+		textFiltered[num_tweet][2]['#'] = len(textFiltered[num_tweet][0]['hashtag'])
+		textFiltered[num_tweet][2]['U'] = len(textFiltered[num_tweet][0]['url'])
+		num_tweet += 1
+
+	
 
 	return textFiltered
 

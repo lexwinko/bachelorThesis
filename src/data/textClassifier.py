@@ -12,7 +12,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
 
 
@@ -22,46 +21,51 @@ def classifyData(file, method):
 	classes = pd.get_dummies(pd.Series(list(data['lang'])))
 	lang = ['French', 'German', 'Greek', 'English', 'Indian', 'Japanese', 'Russian', 'Turkish']
 	sentence = ['correctedSentence', 'originalSentence']
-	ngrams = ['charNGrams','wordNGrams']
+	ngrams = ['charNGrams','wordNGrams', 'lang']
 	features = ['elongated','caps','sentenceLength','sentenceWordLength','spellDelta','#','@','E',',','~','U','A','D','!','N','P','O','R','&','L','Z','^','V','$','G','T','X','S','Y','M']
 
+
+	grouped = data[ngrams].groupby('lang',as_index=False)
+	for x in grouped.groups:
+		current = grouped.get_group(x)
+		print(current)
 
 	###################################################
 	#			
 	#			KTRAIN
 	#
-	data_ktrain = pd.DataFrame(data['originalSentence']).join(classes)
+	# data_ktrain = pd.DataFrame(data['originalSentence']).join(classes)
 
-	print(data_ktrain.head())
+	# print(data_ktrain.head())
 
-	(x_train, y_train), (x_test, y_test), preproc = txt.texts_from_df(data_ktrain, 
-																   'originalSentence', # name of column containing review text
-																   label_columns=lang,
-																   maxlen=75, 
-																   max_features=100000,
-																   preprocess_mode='bert',
-																   val_pct=0.1,
-																   ngram_range=3)
+	# (x_train, y_train), (x_test, y_test), preproc = txt.texts_from_df(data_ktrain, 
+	# 															   'originalSentence', # name of column containing review text
+	# 															   label_columns=lang,
+	# 															   maxlen=40, 
+	# 															   max_features=100000,
+	# 															   preprocess_mode='bert',
+	# 															   val_pct=0.1,
+	# 															   ngram_range=2)
 
-	print(preproc)
+	# print(preproc)
 
-	model = txt.text_classifier('bert', (x_train, y_train) , preproc=preproc)
-	learner = ktrain.get_learner(model, 
-							 train_data=(x_train, y_train), 
-							 val_data=(x_test, y_test), 
-							 batch_size=32)
+	# model = txt.text_classifier('bert', (x_train, y_train) , preproc=preproc)
+	# learner = ktrain.get_learner(model, 
+	# 						 train_data=(x_train, y_train), 
+	# 						 val_data=(x_test, y_test), 
+	# 						 batch_size=32)
 
-	learner.lr_find(show_plot=True)
-	learner.autofit(5e-3, 1)
+	# learner.lr_find(show_plot=True)
+	# learner.autofit(5e-3, 1)
 
-	learner.view_top_losses(n=1, preproc=preproc)
+	# learner.view_top_losses(n=1, preproc=preproc)
 
 
 	###################################################
 	#		
 	#			Other models
 	#
-	data_train_X, data_test_X, data_train_y, data_test_y = train_test_split(data[features], data['lang'], test_size=0.2, random_state=int(time.time()))
+	data_train_X, data_test_X, data_train_y, data_test_y = train_test_split(data[features], data['lang'], test_size=0.3, random_state=int(time.time()))
 	print(len(data_train_X), len(data_train_y), len(data_test_X), len(data_test_y))
 
 	if method == 'GNB':
