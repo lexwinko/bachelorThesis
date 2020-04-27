@@ -3,8 +3,10 @@ import numpy as np
 import sys
 import time
 import csv
-import ktrain
-from ktrain import text as txt
+
+#import ktrain
+#from ktrain import text as txt
+
 
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split
@@ -21,14 +23,58 @@ def classifyData(file, method):
 	classes = pd.get_dummies(pd.Series(list(data['lang'])))
 	lang = ['French', 'German', 'Greek', 'English', 'Indian', 'Japanese', 'Russian', 'Turkish']
 	sentence = ['correctedSentence', 'originalSentence']
-	ngrams = ['charNGrams','wordNGrams', 'lang']
-	features = ['elongated','caps','sentenceLength','sentenceWordLength','spellDelta','#','@','E',',','~','U','A','D','!','N','P','O','R','&','L','Z','^','V','$','G','T','X','S','Y','M']
+	
+	features = [	'elongated',
+					'caps',
+					'sentenceLength',
+					'sentenceWordLength',
+					'spellDelta',
+					'#',
+					'@',
+					'E',
+					',',
+					'~',
+					'U',
+					'A',
+					'D',
+					'!',
+					'N',
+					'P',
+					'O',
+					'R',
+					'&',
+					'L',
+					'Z',
+					'^',
+					'V',
+					'$',
+					'G',
+					'T',
+					'X',
+					'S',
+					'Y',
+					'M',
+					'charNGrams_similarity_French',
+					'wordNGrams_similarity_French',
+					'charNGrams_similarity_German',
+					'wordNGrams_similarity_German',
+					'charNGrams_similarity_Greek',
+					'wordNGrams_similarity_Greek',
+					'charNGrams_similarity_Indian',
+					'wordNGrams_similarity_Indian',
+					'charNGrams_similarity_Russian',
+					'wordNGrams_similarity_Russian',
+					'charNGrams_similarity_Japanese',
+					'wordNGrams_similarity_Japanese',
+					'charNGrams_similarity_Turkish',
+					'wordNGrams_similarity_Turkish',
+					'charNGrams_similarity_English',
+					'wordNGrams_similarity_English']
 
+	featuredata = data[features]
 
-	grouped = data[ngrams].groupby('lang',as_index=False)
-	for x in grouped.groups:
-		current = grouped.get_group(x)
-		print(current)
+			
+
 
 	###################################################
 	#			
@@ -65,7 +111,7 @@ def classifyData(file, method):
 	#		
 	#			Other models
 	#
-	data_train_X, data_test_X, data_train_y, data_test_y = train_test_split(data[features], data['lang'], test_size=0.3, random_state=int(time.time()))
+	data_train_X, data_test_X, data_train_y, data_test_y = train_test_split(featuredata, data['lang'], test_size=0.3, random_state=int(time.time()))
 	print(len(data_train_X), len(data_train_y), len(data_test_X), len(data_test_y))
 
 	if method == 'GNB':
@@ -93,6 +139,9 @@ def classifyData(file, method):
 		NN = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(150, 10), random_state=int(time.time())).fit(data_train_X, data_train_y)
 		print('Accuracy of Neural network classifier on training set: {:.2f}'.format(NN.score(data_train_X, data_train_y)))
 		print('Accuracy of Neural network classifier on test set: {:.2f}'.format(NN.score(data_test_X, data_test_y)))
+
+
+
 
 
 

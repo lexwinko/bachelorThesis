@@ -3,6 +3,7 @@ import pandas as pd
 import csv
 import os
 import re
+from ngram import NGram
 from nltk.util import ngrams
 from collections import OrderedDict
 
@@ -114,13 +115,129 @@ def ngramModel(file, limit):
 		ngrams_limited[lang]['charNGrams'] = list(ngrams_descending[lang]['charNGrams'])[:max(1,int(limit))]
 		ngrams_limited[lang]['wordNGrams'] = list(ngrams_descending[lang]['wordNGrams'])[:max(1,int(limit))]
 	
-	print(ngrams_limited)
+	for lang in ngrams_limited:
+		filename = "output/ngrams_"+lang+".csv"
+		with open(filename, "w") as f:
+			fieldnames = ['charNGrams', 'wordNGrams']
+			writer = csv.DictWriter(f, fieldnames=fieldnames)
+			writer.writeheader()
+			for entry in range(0,min(len(ngrams_limited[lang]['charNGrams']),len(ngrams_limited[lang]['wordNGrams']),int(limit))):
+				writer.writerow({'charNGrams': ngrams_limited[lang]['charNGrams'][entry][0], 'wordNGrams': ngrams_limited[lang]['wordNGrams'][entry][0]})
+
+def createClassifierFile(file):
+	data = pd.read_csv(file, header=0, sep=',')
+	lang = ['French', 'German', 'Greek', 'English', 'Indian', 'Japanese', 'Russian', 'Turkish']
+	ngrams = ['charNGrams','wordNGrams', 'lang']
+	features_similarity = [	'charNGrams_similarity_French',
+							'wordNGrams_similarity_French',
+							'charNGrams_similarity_German',
+							'wordNGrams_similarity_German',
+							'charNGrams_similarity_Greek',
+							'wordNGrams_similarity_Greek',
+							'charNGrams_similarity_Indian',
+							'wordNGrams_similarity_Indian',
+							'charNGrams_similarity_Russian',
+							'wordNGrams_similarity_Russian',
+							'charNGrams_similarity_Japanese',
+							'wordNGrams_similarity_Japanese',
+							'charNGrams_similarity_Turkish',
+							'wordNGrams_similarity_Turkish',
+							'charNGrams_similarity_English',
+							'wordNGrams_similarity_English']
+
+	for feature in features_similarity:
+		data[feature] = 0
+
+
+	ngram_data = {	'French':{'charNGrams':NGram(),'wordNGrams':NGram()}, 
+					'German':{'charNGrams':NGram(),'wordNGrams':NGram()}, 
+					'Greek':{'charNGrams':NGram(),'wordNGrams':NGram()}, 
+					'English':{'charNGrams':NGram(),'wordNGrams':NGram()},
+					'Indian':{'charNGrams':NGram(),'wordNGrams':NGram()}, 
+					'Japanese':{'charNGrams':NGram(),'wordNGrams':NGram()}, 
+					'Russian':{'charNGrams':NGram(),'wordNGrams':NGram()}, 
+					'Turkish':{'charNGrams':NGram(),'wordNGrams':NGram()}}
+	for language in lang:
+		raw_ngrams = []
+		if(language == 'French'):
+			raw_ngrams = pd.read_csv('../../data/processed/France/ngrams_French.csv', header=0)
+		elif(language == 'German'):
+			raw_ngrams = pd.read_csv('../../data/processed/Germany/ngrams_German.csv', header=0)
+		elif(language == 'Greek'):
+			raw_ngrams = pd.read_csv('../../data/processed/Greece/ngrams_Greek.csv', header=0)
+		elif(language == 'Indian'):
+			raw_ngrams = pd.read_csv('../../data/processed/India/ngrams_Indian.csv', header=0)
+		elif(language == 'Japanese'):
+			raw_ngrams = pd.read_csv('../../data/processed/Japan/ngrams_Japanese.csv', header=0)
+		elif(language == 'Russian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Russia/ngrams_Russian.csv', header=0)
+		elif(language == 'Turkish'):
+			raw_ngrams = pd.read_csv('../../data/processed/Turkey/ngrams_Turkish.csv', header=0)
+		else:
+			raw_ngrams = pd.read_csv('../../data/processed/Native/ngrams_English.csv', header=0)
+		
+		for entry in raw_ngrams['charNGrams']:
+			ngram_data[language]['charNGrams'].add(str(entry))
+		for entry in raw_ngrams['wordNGrams']:
+			ngram_data[language]['wordNGrams'].add(str(entry))
+
+	grouped = data[ngrams].groupby('lang',as_index=False)
+	for x in grouped.groups:
+		current = grouped.get_group(x)
+		print('Current language: '+x)
+		for index, row in current.iterrows():
+			print(index)
+			ngram_current = {'charNGrams':NGram(), 'wordNGrams':NGram()}
+			ngramlist = row['charNGrams'].split(',')
+			for entry in range(0, len(ngramlist)):
+				ngramlist[entry] = re.sub(r" '", r'', ngramlist[entry])
+				ngramlist[entry] = re.sub(r"\[", r'', ngramlist[entry])
+				ngramlist[entry] = re.sub(r"\]", r'', ngramlist[entry])
+				ngramlist[entry] = re.sub(r"'", r'', ngramlist[entry])
+				ngramlist[entry] = ngramlist[entry].lower()
+				ngram_current['charNGrams'].add(str(ngramlist[entry]))
+			ngramlist = row['wordNGrams'].split(',')
+			for entry in range(0, len(ngramlist)):
+				ngramlist[entry] = re.sub(r" '", r'', ngramlist[entry])
+				ngramlist[entry] = re.sub(r"\[", r'', ngramlist[entry])
+				ngramlist[entry] = re.sub(r"\]", r'', ngramlist[entry])
+				ngramlist[entry] = re.sub(r"'", r'', ngramlist[entry])
+				ngramlist[entry] = ngramlist[entry].lower()
+				ngram_current['wordNGrams'].add(str(ngramlist[entry]))
+
+			similarity = {	'French':{'charNGrams':0,'wordNGrams':0}, 
+						'German':{'charNGrams':0,'wordNGrams':0}, 
+						'Greek':{'charNGrams':0,'wordNGrams':0}, 
+						'English':{'charNGrams':0,'wordNGrams':0},
+						'Indian':{'charNGrams':0,'wordNGrams':0}, 
+						'Japanese':{'charNGrams':0,'wordNGrams':0}, 
+						'Russian':{'charNGrams':0,'wordNGrams':0}, 
+						'Turkish':{'charNGrams':0,'wordNGrams':0}}
+
+			for language in lang:
+				similarity[language] = getNGramSimilarity(ngram_current, ngram_data[language])
+				data.loc[index, 'charNGrams_similarity_'+str(language)] = similarity[language]['charNGrams']
+				data.loc[index, 'wordNGrams_similarity_'+str(language)] = similarity[language]['wordNGrams']
+
+	data.to_csv("output/classification_data.csv", index=False)
+
+def getNGramSimilarity(ngrams, data):
+	#print("similarity")
+	#print('ngrams', len(ngrams['charNGrams']), len(ngrams['wordNGrams']))
+	#print('data',len(data['charNGrams']), len(data['wordNGrams']))
+	intersection = {'charNGrams': list(ngrams['charNGrams'].intersection(data['charNGrams'])), 'wordNGrams':list(ngrams['wordNGrams'].intersection(data['wordNGrams']))}
+	union = {'charNGrams': list(ngrams['charNGrams'].union(data['charNGrams'])), 'wordNGrams':list(ngrams['wordNGrams'].union(data['wordNGrams']))}
+	#print(len(intersection['charNGrams']), len(intersection['wordNGrams']), len(union['charNGrams']), len(union['wordNGrams']))
+	similariy = {'charNGrams': NGram.ngram_similarity(len(intersection['charNGrams']), len(union['charNGrams'])), 'wordNGrams': NGram.ngram_similarity(len(intersection['wordNGrams']), len(union['wordNGrams']))}
+	return similariy
 
 
 if __name__ == "__main__":
 	file = sys.argv[1]
-	func = sys.argv[2]
-	filters = sys.argv[3]
+	if(len(sys.argv) > 2):
+		func = sys.argv[2]
+	if(len(sys.argv) > 3):
+		filters = sys.argv[3]
 	if(func == 'filter'):
 		print('Filtering '+ file + ' with filters: '+filters)
 		filterCSV(file, filters)
@@ -130,5 +247,8 @@ if __name__ == "__main__":
 	elif(func == 'ngram'):
 		print('Creating ngram model '+ file + ' with limit: ' +filters)
 		ngramModel(file,filters)
+	elif(func == 'classifier'):
+		print('Creating classification file')
+		createClassifierFile(file)
 	print('Done')
 	#print(result)

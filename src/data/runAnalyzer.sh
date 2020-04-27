@@ -43,3 +43,18 @@ python3 ../tools/filterCSV.py output/combined_Pol.csv split 20
 
 cat output/combined_Pol.csv output/combined_SocSoc.csv output/combined_ArtCul.csv output/combined_BuiTecSci.csv > output/full_data.csv
 
+python3 ../tools/filterCSV.py output/full_data.csv ngram 1000
+mv output/ngrams_German.csv ../../data/processed/Germany/
+mv output/ngrams_Greek.csv ../../data/processed/Greece/
+mv output/ngrams_Indian.csv ../../data/processed/India/
+mv output/ngrams_French.csv ../../data/processed/France/
+mv output/ngrams_English.csv ../../data/processed/Native/
+mv output/ngrams_Russian.csv ../../data/processed/Russia/
+mv output/ngrams_Japanese.csv ../../data/processed/Japan/
+mv output/ngrams_Turkish.csv ../../data/processed/Turkey/
+
+python3 ../tools/filterCSV.py output/full_data.csv classifier
+
+
+
+
