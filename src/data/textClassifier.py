@@ -15,6 +15,10 @@ from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
+from sklearn.model_selection import KFold
+from sklearn import preprocessing
+
+from tpot import TPOTClassifier
 
 
 def classifyData(file, method):
@@ -71,8 +75,14 @@ def classifyData(file, method):
 					'charNGrams_similarity_English',
 					'wordNGrams_similarity_English']
 
-	featuredata = data[features]
+	le = preprocessing.LabelEncoder()
+	le.fit(lang)
+	print(le.classes_)
 
+	featuredata = data[features].to_numpy()
+	labeldata = le.transform(data['lang'])
+
+	print(labeldata)
 			
 
 
@@ -111,35 +121,46 @@ def classifyData(file, method):
 	#		
 	#			Other models
 	#
-	data_train_X, data_test_X, data_train_y, data_test_y = train_test_split(featuredata, data['lang'], test_size=0.3, random_state=int(time.time()))
-	print(len(data_train_X), len(data_train_y), len(data_test_X), len(data_test_y))
+	#data_train_X, data_test_X, data_train_y, data_test_y = train_test_split(featuredata, data['lang'], test_size=0.3, random_state=int(time.time()))
 
-	if method == 'GNB':
-		gnb = GaussianNB()
-		model = gnb.fit(data_train_X, data_train_y)
-		print('Accuracy of GaussianNB classifier on training set: {:.2f}'.format(gnb.score(data_train_X, data_train_y)))
-		print('Accuracy of GaussianNB regression classifier on test set: {:.2f}'.format(gnb.score(data_test_X, data_test_y)))
+	kf = KFold(n_splits=10)
+	tpot = TPOTClassifier(n_jobs=-1, generations=5, population_size=50, verbosity=2, random_state=42)
 
-	elif method == 'LR':
-		LR = LogisticRegression(random_state=int(time.time()), solver='lbfgs', multi_class='multinomial').fit(data_train_X, data_train_y)
-		print('Accuracy of Logistic regression classifier on training set: {:.2f}'.format(LR.score(data_train_X, data_train_y)))
-		print('Accuracy of Logistic regression classifier on test set: {:.2f}'.format(LR.score(data_test_X, data_test_y)))
 
-	elif method == 'SVM':
-		SVM = svm.SVC(decision_function_shape="ovo", gamma='auto').fit(data_train_X, data_train_y)
-		print('Accuracy of SVM classifier on training set: {:.2f}'.format(SVM.score(data_train_X, data_train_y)))
-		print('Accuracy of SVM classifier on test set: {:.2f}'.format(SVM.score(data_test_X, data_test_y)))
+	splitnr = 0
+	for train, test in kf.split(featuredata):
+		print(len(train), len(test))
+		tpot.fit(featuredata[train], labeldata[train])
+		print(tpot.score(featuredata[test], labeldata[test]))
+		tpot.export('tpot_digits_pipeline_'+str(splitnr)+'.py')
+		splitnr += 1
 
-	elif method == 'RF':
-		RF = RandomForestClassifier(n_estimators=1000, max_depth=15, random_state=int(time.time())).fit(data_train_X, data_train_y)
-		print('Accuracy of Random Forest classifier on training set: {:.2f}'.format(RF.score(data_train_X, data_train_y)))
-		print('Accuracy of Random Forest classifier on test set: {:.2f}'.format(RF.score(data_test_X, data_test_y)))
+		# if method == 'GNB':
+		# 	gnb = GaussianNB()
+		# 	model = gnb.fit(featuredata[train], labeldata[train])
+		# 	print('Accuracy of GaussianNB classifier on training set: {:.2f}'.format(gnb.score(featuredata[train], labeldata[train])))
+		# 	print('Accuracy of GaussianNB regression classifier on test set: {:.2f}'.format(gnb.score(featuredata[test], labeldata[test])))
 
-	elif method == 'NN':
-		NN = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(150, 10), random_state=int(time.time())).fit(data_train_X, data_train_y)
-		print('Accuracy of Neural network classifier on training set: {:.2f}'.format(NN.score(data_train_X, data_train_y)))
-		print('Accuracy of Neural network classifier on test set: {:.2f}'.format(NN.score(data_test_X, data_test_y)))
+		# elif method == 'LR':
+		# 	LR = LogisticRegression(random_state=int(time.time()), solver='lbfgs', multi_class='multinomial').fit(featuredata[train], labeldata[train])
+		# 	print('Accuracy of Logistic regression classifier on training set: {:.2f}'.format(LR.score(featuredata[train], labeldata[train])))
+		# 	print('Accuracy of Logistic regression classifier on test set: {:.2f}'.format(LR.score(featuredata[test], labeldata[test])))
 
+		# elif method == 'SVM':
+		# 	SVM = svm.SVC(decision_function_shape="ovo", gamma='auto').fit(featuredata[train],labeldata[train])
+		# 	print('Accuracy of SVM classifier on training set: {:.2f}'.format(SVM.score(featuredata[train], labeldata[train])))
+		# 	print('Accuracy of SVM classifier on test set: {:.2f}'.format(SVM.score(featuredata[test], labeldata[test])))
+
+		# elif method == 'RF':
+		# 	RF = RandomForestClassifier(n_estimators=1000, max_depth=15, random_state=int(time.time())).fit(featuredata[train], labeldata[train])
+		# 	print('Accuracy of Random Forest classifier on training set: {:.2f}'.format(RF.score(featuredata[train], labeldata[train])))
+		# 	print('Accuracy of Random Forest classifier on test set: {:.2f}'.format(RF.score(featuredata[test], labeldata[test])))
+
+		# elif method == 'NN':
+		# 	NN = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(150, 10), random_state=int(time.time())).fit(featuredata[train], labeldata[train])
+		# 	print('Accuracy of Neural network classifier on training set: {:.2f}'.format(NN.score(featuredata[train], labeldata[train])))
+		# 	print('Accuracy of Neural network classifier on test set: {:.2f}'.format(NN.score(featuredata[test], labeldata[test])))
+	
 
 
 
@@ -147,7 +168,11 @@ def classifyData(file, method):
 
 if __name__ == "__main__":
 	data = sys.argv[1]
-	method = sys.argv[2]
-	print('Classifying '+ data + ' with ' +method)
-	classifyData(data, method)
+	if(len(sys.argv) > 2):
+		method = sys.argv[2]
+		print('Classifying '+ data + ' with ' +method)
+		classifyData(data, method)
+	else:
+		print('Classifying '+ data +' with TPOT')
+		classifyData(data, 'none')
 	print('Done')
