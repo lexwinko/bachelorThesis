@@ -8,17 +8,18 @@ import csv
 #from ktrain import text as txt
 
 
-from sklearn.naive_bayes import GaussianNB
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn import svm
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
 from sklearn.model_selection import KFold
 from sklearn import preprocessing
-
-from tpot import TPOTClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.linear_model import SGDClassifier
+from sklearn.decomposition import FastICA
+from xgboost import XGBClassifier
+from sklearn.pipeline import make_pipeline, make_union
+from sklearn.preprocessing import Normalizer
+from sklearn.svm import LinearSVC
+from tpot.builtins import StackingEstimator
+from tpot.export_utils import set_param_recursive
+from sklearn.metrics import accuracy_score
 
 
 def classifyData(file, method):
@@ -82,86 +83,74 @@ def classifyData(file, method):
 	featuredata = data[features].to_numpy()
 	labeldata = le.transform(data['lang'])
 
-	print(labeldata)
-			
-
-
-	###################################################
-	#			
-	#			KTRAIN
-	#
-	# data_ktrain = pd.DataFrame(data['originalSentence']).join(classes)
-
-	# print(data_ktrain.head())
-
-	# (x_train, y_train), (x_test, y_test), preproc = txt.texts_from_df(data_ktrain, 
-	# 															   'originalSentence', # name of column containing review text
-	# 															   label_columns=lang,
-	# 															   maxlen=40, 
-	# 															   max_features=100000,
-	# 															   preprocess_mode='bert',
-	# 															   val_pct=0.1,
-	# 															   ngram_range=2)
-
-	# print(preproc)
-
-	# model = txt.text_classifier('bert', (x_train, y_train) , preproc=preproc)
-	# learner = ktrain.get_learner(model, 
-	# 						 train_data=(x_train, y_train), 
-	# 						 val_data=(x_test, y_test), 
-	# 						 batch_size=32)
-
-	# learner.lr_find(show_plot=True)
-	# learner.autofit(5e-3, 1)
-
-	# learner.view_top_losses(n=1, preproc=preproc)
-
-
-	###################################################
-	#		
-	#			Other models
-	#
-	#data_train_X, data_test_X, data_train_y, data_test_y = train_test_split(featuredata, data['lang'], test_size=0.3, random_state=int(time.time()))
-
 	kf = KFold(n_splits=10)
-	tpot = TPOTClassifier(n_jobs=-1, generations=5, population_size=50, verbosity=2, random_state=42)
 
+	model_results = {'GDC':[], 'SGD':[], 'ICA':[], 'XGB':[]}
 
-	splitnr = 0
 	for train, test in kf.split(featuredata):
-		print(len(train), len(test))
-		tpot.fit(featuredata[train], labeldata[train])
-		print(tpot.score(featuredata[test], labeldata[test]))
-		tpot.export('tpot_digits_pipeline_'+str(splitnr)+'.py')
-		splitnr += 1
 
-		# if method == 'GNB':
-		# 	gnb = GaussianNB()
-		# 	model = gnb.fit(featuredata[train], labeldata[train])
-		# 	print('Accuracy of GaussianNB classifier on training set: {:.2f}'.format(gnb.score(featuredata[train], labeldata[train])))
-		# 	print('Accuracy of GaussianNB regression classifier on test set: {:.2f}'.format(gnb.score(featuredata[test], labeldata[test])))
+		# Average CV score on the training set was: 0.6931966449207828
+		exported_pipeline = make_pipeline(
+		    StackingEstimator(estimator=LinearSVC(C=10.0,max_iter=120000, dual=False, loss="squared_hinge", penalty="l1", tol=0.001)),
+		    Normalizer(norm="max"),
+		    GradientBoostingClassifier(learning_rate=0.1, max_depth=9, max_features=0.2, min_samples_leaf=18, min_samples_split=20, n_estimators=100, subsample=0.6500000000000001)
+		)
+		# Fix random state for all the steps in exported pipeline
+		#set_param_recursive(exported_pipeline.steps, 'random_state', 42)
 
-		# elif method == 'LR':
-		# 	LR = LogisticRegression(random_state=int(time.time()), solver='lbfgs', multi_class='multinomial').fit(featuredata[train], labeldata[train])
-		# 	print('Accuracy of Logistic regression classifier on training set: {:.2f}'.format(LR.score(featuredata[train], labeldata[train])))
-		# 	print('Accuracy of Logistic regression classifier on test set: {:.2f}'.format(LR.score(featuredata[test], labeldata[test])))
+		exported_pipeline.fit(featuredata[train], labeldata[train])
+		results = exported_pipeline.predict(featuredata[test])
+		accuracy = accuracy_score(labeldata[test], results)
+		model_results['GDC'].append([accuracy,train,test])
 
-		# elif method == 'SVM':
-		# 	SVM = svm.SVC(decision_function_shape="ovo", gamma='auto').fit(featuredata[train],labeldata[train])
-		# 	print('Accuracy of SVM classifier on training set: {:.2f}'.format(SVM.score(featuredata[train], labeldata[train])))
-		# 	print('Accuracy of SVM classifier on test set: {:.2f}'.format(SVM.score(featuredata[test], labeldata[test])))
+		# Average CV score on the training set was: 0.748572421636628
+		exported_pipeline = make_pipeline(
+		    StackingEstimator(estimator=SGDClassifier(alpha=0.001, eta0=1.0, fit_intercept=False, l1_ratio=1.0, learning_rate="invscaling", loss="squared_hinge", penalty="elasticnet", power_t=0.0)),
+		    LinearSVC(C=15.0,max_iter=120000, dual=False, loss="squared_hinge", penalty="l1", tol=1e-05)
+		)
+		# Fix random state for all the steps in exported pipeline
+		#set_param_recursive(exported_pipeline.steps, 'random_state', 42)
 
-		# elif method == 'RF':
-		# 	RF = RandomForestClassifier(n_estimators=1000, max_depth=15, random_state=int(time.time())).fit(featuredata[train], labeldata[train])
-		# 	print('Accuracy of Random Forest classifier on training set: {:.2f}'.format(RF.score(featuredata[train], labeldata[train])))
-		# 	print('Accuracy of Random Forest classifier on test set: {:.2f}'.format(RF.score(featuredata[test], labeldata[test])))
+		exported_pipeline.fit(featuredata[train], labeldata[train])
+		results = exported_pipeline.predict(featuredata[test])
+		accuracy = accuracy_score(labeldata[test], results)
+		model_results['SGD'].append([accuracy,train,test])
 
-		# elif method == 'NN':
-		# 	NN = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(150, 10), random_state=int(time.time())).fit(featuredata[train], labeldata[train])
-		# 	print('Accuracy of Neural network classifier on training set: {:.2f}'.format(NN.score(featuredata[train], labeldata[train])))
-		# 	print('Accuracy of Neural network classifier on test set: {:.2f}'.format(NN.score(featuredata[test], labeldata[test])))
-	
+		# Average CV score on the training set was: 0.7373165618448637
+		exported_pipeline = make_pipeline(
+		    FastICA(tol=0.9500000000000001),
+		    LinearSVC(C=15.0,max_iter=120000, dual=False, loss="squared_hinge", penalty="l1", tol=1e-05)
+		)
+		# Fix random state for all the steps in exported pipeline
+		#set_param_recursive(exported_pipeline.steps, 'random_state', 42)
 
+		exported_pipeline.fit(featuredata[train], labeldata[train])
+		results = exported_pipeline.predict(featuredata[test])
+		accuracy = accuracy_score(labeldata[test], results)
+		model_results['ICA'].append([accuracy,train,test])
+
+		# Average CV score on the training set was: 0.7121593291404611
+		exported_pipeline = XGBClassifier(learning_rate=0.1, max_depth=9, min_child_weight=14, n_estimators=100, nthread=1, subsample=0.8500000000000001)
+		# Fix random state in exported estimator
+		#if hasattr(exported_pipeline, 'random_state'):
+		#    setattr(exported_pipeline, 'random_state', 42)
+
+		exported_pipeline.fit(featuredata[train], labeldata[train])
+		results = exported_pipeline.predict(featuredata[test])
+		accuracy = accuracy_score(labeldata[test], results)
+		model_results['XGB'].append([accuracy,train,test])
+
+	#print(model_results['GDC'][0],len(model_results['GDC']))
+	#print(model_results['GDC'][0][0])
+	#average =[sum(x[0])/len(model_results['GDC']) for x in model_results['GDC']]
+	#print(average)
+	for model in model_results:
+		print(model)
+		average = 0
+		average = [(average+value[0])/len(model_results[model]) for value in model_results[model]]
+		print(sum(average))
+			
+			
 
 
 
