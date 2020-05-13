@@ -13,6 +13,8 @@ import language_check
 import techniques
 import re
 import glob
+import stanza
+
 from collections import Counter
 from nltk.util import ngrams
 from nltk.tokenize import RegexpTokenizer
@@ -151,10 +153,11 @@ def extractFeatures(text, lang=['en','en-US']):
 	tokenizedText = tokenizer.tokenize(originalText)
 	tokenizedChar = [c for c in ' '.join(tokenizedText)]
 
-	sentenceCharNGrams = [ ''.join(grams) for grams in ngrams(tokenizedChar, 3)]
-	sentenceWordNGrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 2)]
+	sentenceCharTrigrams = [ ''.join(grams) for grams in ngrams(tokenizedChar, 3)]
+	sentenceWordBigrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 2)]
+	sentenceWordUnigrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 1)]
 
-	return {'correctedSentence': sentence, 'originalSentence': originalText, 'elongated' : countElongated, 'caps': countCaps, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charNGrams':sentenceCharNGrams, 'wordNGrams': sentenceWordNGrams, 'url': urls, 'hashtag': hashtags, 'atUser': atUsers}
+	return {'correctedSentence': sentence, 'originalSentence': originalText, 'elongated' : countElongated, 'caps': countCaps, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charTrigrams':sentenceCharTrigrams, 'wordBigrams': sentenceWordBigrams, 'wordUnigrams':sentenceWordUnigrams, 'url': urls, 'hashtag': hashtags, 'atUser': atUsers}
 
 
 #	=================================================================
@@ -233,7 +236,58 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 		textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user': textUser}])
 		num_row += 1
 
-	text_POS = runPOSTagger(text[0]['originalSentence'] for text in textFiltered)
+	text_POS = []
+	if(filetype == 'reddit'):
+		stanza.download('en')
+		nlp = stanza.Pipeline('en', processors='tokenize,pos')
+		for text in textFiltered:
+			doc = nlp(text[0]['originalSentence'])
+			current = []
+			for sentence in doc.sentences:
+				for word in sentence.words:
+					postag = 'none'
+					if(word.pos == 'ADV'):
+						postag = 'R'
+					elif(word.pos == 'NOUN'):
+						postag = 'N'
+					elif(word.pos == 'CCONJ'):
+						postag = '&'
+					elif(word.pos == 'DET'):
+						postag = 'D'
+					elif(word.pos == 'INTJ'):
+						postag = '!'
+					elif(word.pos == 'NUM'):
+						postag = '$'
+					elif(word.pos == 'PART'):
+						postag = 'T'
+					elif(word.pos == 'PROPN'):
+						postag = '^'
+					elif(word.pos == 'PUNCT'):
+						postag = ','
+					elif(word.pos == 'ADJ'):
+						postag = 'A'
+					elif(word.pos == 'X' or word.pos == 'SYM'):
+						postag = 'G'
+					elif(word.pos == 'AUX'):
+						postag = 'V'
+					elif(word.pos == 'ADP'):
+						postag = 'P'
+					elif(word.pos == 'PRON'):
+						postag = 'O'
+					elif(word.pos == 'SCONJ'):
+						postag = 'P'
+					elif(word.pos == 'VERB'):
+						postag = 'V'
+					else:
+						print(word.pos)
+					current.append([word.text, postag])
+			text_POS.append(current)
+
+	else:
+		text_POS = runPOSTagger(text[0]['originalSentence'] for text in textFiltered)
+
+
+	
 	textFiltered = textFiltered[:len(text_POS)]
 
 	#	N : Common Noun
@@ -296,18 +350,21 @@ if __name__ == "__main__":
 		category = sys.argv[5]
 	if(len(sys.argv) > 6):
 		limit = sys.argv[6]
-	
-	files = glob.glob(path+'*.csv')
+
 	outputValues = []
-	for file in files:
-		print('Running '+ file + ', '+family+', '+lang+', '+limit)
-
-		outputValues.append(analyzeText(file, filetype, family, lang, category, limit))
-
-
-	fields = [ 'correctedSentence','originalSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charNGrams','wordNGrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
 	if(filetype == 'reddit'):
-		filename = 'output/result'+file.split('/')[-1].split('.')[1]+file.split('/')[-1].split('.')[3]+ '.csv'
+		print('Running '+ path + ', '+family+', '+lang+', '+limit)
+		outputValues.append(analyzeText(path, filetype, family, lang, category, limit))
+	else:
+		files = glob.glob(path+'*.csv')
+		for file in files:
+			print('Running '+ file + ', '+family+', '+lang+', '+limit)
+			outputValues.append(analyzeText(file, filetype, family, lang, category, limit))
+
+
+	fields = [ 'correctedSentence','originalSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
+	if(filetype == 'reddit'):
+		filename = 'output/result'+path.split('/')[-1].split('.')[1]+path.split('/')[-1].split('.')[3]+ '.csv'
 	else:
 		filename = 'output/result_'+lang+'_'+category+'.csv'
 	os.makedirs(os.path.dirname(filename), exist_ok=True)
