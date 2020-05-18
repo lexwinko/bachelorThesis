@@ -14,6 +14,8 @@ import techniques
 import re
 import glob
 import stanza
+from tokenizer import tokenizer
+
 
 from collections import Counter
 from nltk.util import ngrams
@@ -240,47 +242,51 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 	if(filetype == 'reddit'):
 		stanza.download('en')
 		nlp = stanza.Pipeline('en', processors='tokenize,pos')
+		R = tokenizer.RedditTokenizer()
 		for text in textFiltered:
-			doc = nlp(text[0]['originalSentence'])
+			tokens = R.tokenize(text[0]['originalSentence'])
 			current = []
-			for sentence in doc.sentences:
-				for word in sentence.words:
-					postag = 'none'
-					if(word.pos == 'ADV'):
-						postag = 'R'
-					elif(word.pos == 'NOUN'):
-						postag = 'N'
-					elif(word.pos == 'CCONJ'):
-						postag = '&'
-					elif(word.pos == 'DET'):
-						postag = 'D'
-					elif(word.pos == 'INTJ'):
-						postag = '!'
-					elif(word.pos == 'NUM'):
-						postag = '$'
-					elif(word.pos == 'PART'):
-						postag = 'T'
-					elif(word.pos == 'PROPN'):
-						postag = '^'
-					elif(word.pos == 'PUNCT'):
-						postag = ','
-					elif(word.pos == 'ADJ'):
-						postag = 'A'
-					elif(word.pos == 'X' or word.pos == 'SYM'):
-						postag = 'G'
-					elif(word.pos == 'AUX'):
-						postag = 'V'
-					elif(word.pos == 'ADP'):
-						postag = 'P'
-					elif(word.pos == 'PRON'):
-						postag = 'O'
-					elif(word.pos == 'SCONJ'):
-						postag = 'P'
-					elif(word.pos == 'VERB'):
-						postag = 'V'
-					else:
-						print(word.pos)
-					current.append([word.text, postag])
+			for word in tokens:
+				doc = nlp(word)
+				for sentence in doc.sentences:
+					for word in sentence.words:
+						postag = 'none'
+						if(word.pos == 'ADV'):
+							postag = 'R'
+						elif(word.pos == 'NOUN'):
+							postag = 'N'
+						elif(word.pos == 'CCONJ'):
+							postag = '&'
+						elif(word.pos == 'DET'):
+							postag = 'D'
+						elif(word.pos == 'INTJ'):
+							postag = '!'
+						elif(word.pos == 'NUM'):
+							postag = '$'
+						elif(word.pos == 'PART'):
+							postag = 'T'
+						elif(word.pos == 'PROPN'):
+							postag = '^'
+						elif(word.pos == 'PUNCT'):
+							postag = ','
+						elif(word.pos == 'ADJ'):
+							postag = 'A'
+						elif(word.pos == 'X' or word.pos == 'SYM'):
+							postag = 'G'
+						elif(word.pos == 'AUX'):
+							postag = 'V'
+						elif(word.pos == 'ADP'):
+							postag = 'P'
+						elif(word.pos == 'PRON'):
+							postag = 'O'
+						elif(word.pos == 'SCONJ'):
+							postag = 'P'
+						elif(word.pos == 'VERB'):
+							postag = 'V'
+						else:
+							print(word.pos)
+						current.append([word.text, postag])
+			print(current)
 			text_POS.append(current)
 
 	else:
