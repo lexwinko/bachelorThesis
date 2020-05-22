@@ -15,10 +15,14 @@ from sklearn import preprocessing
 from xgboost import XGBClassifier
 from tpot.builtins import StackingEstimator
 from tpot.export_utils import set_param_recursive
-from sklearn.metrics import accuracy_score
 from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, RandomForestClassifier
 from sklearn.feature_selection import RFE
 from sklearn.pipeline import make_pipeline, make_union
+
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
 
 
 def classifyData(file, method):
@@ -157,11 +161,21 @@ def classifyData(file, method):
 	#	average = [(average+value[0])/len(model_results[model]) for value in model_results[model]]
 	#	print(sum(average))
 
-	print('Training Accuracy: ',accuracy_score(model_results['Training']['actual'],model_results['Training']['prediction']))
+	print('Training Accuracy Score: ',accuracy_score(model_results['Training']['actual'],model_results['Training']['prediction']))
+	print('Training f1 macro Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='macro'))
+	print('Training f1 micro Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='micro'))
+	print('Training f1 weighted Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
+	print('Training Precision Score: ',precision_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
+	print('Training Recall Score: ',recall_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
 
-	print('KFold Average Accuracy: '+str(sum([accuracy_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction']) for x in range(0,kfold_splits)])/kfold_splits))
-	for entry in model_results['KFold']:
-		print(accuracy_score(entry['actual'], entry['prediction']))
+	print('KFold Average Accuracy Score: '+str(sum([accuracy_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction']) for x in range(0,kfold_splits)])/kfold_splits))
+	print('KFold f1 macro Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='macro') for x in range(0,kfold_splits)])/kfold_splits))
+	print('KFold f1 micro Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='micro') for x in range(0,kfold_splits)])/kfold_splits))
+	print('KFold f1 weighted Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+	print('KFold Precision Score: '+str(sum([precision_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+	print('KFold Recall Score: '+str(sum([recall_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+	#for entry in model_results['KFold']:
+	#	print(accuracy_score(entry['actual'], entry['prediction']))
 			
 			
 
