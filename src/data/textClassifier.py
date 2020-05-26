@@ -53,7 +53,7 @@ def classifyData(file, method):
 					'wordBigrams_similarity_English',
 					'wordUnigrams_similarity_English']
 	data = data[data.correctedSentence.str.contains('correctedSentence') == False]
-	data.sample(frac=1., random_state=int(time.time()))
+	data.sample(frac=1., random_state=42)
 	classes = pd.get_dummies(pd.Series(list(data['lang'])))
 	lang = ['French', 'German', 'Greek', 'English', 'Indian', 'Japanese', 'Russian', 'Turkish']
 	sentence = ['correctedSentence', 'originalSentence']
@@ -124,60 +124,56 @@ def classifyData(file, method):
 	
 
 	model_results = {'Training':[], 'KFold':[]}
-	#tpot = TPOTClassifier(generations=5, population_size=50, verbosity=2)
 
-	
+	if(method == 'tpot'):
+		tpot = TPOTClassifier(generations=5, population_size=50, verbosity=2,random_state=42)
+		tpot.fit(X_train, y_train)
+		print(tpot.score(X_test, y_test))
+		tpot.export('tpot_model.py')
+	else:
+		exported_pipeline = make_pipeline(
+	    StackingEstimator(estimator=GradientBoostingClassifier(learning_rate=0.1, max_depth=3, max_features=0.7500000000000001, min_samples_leaf=17, min_samples_split=17, n_estimators=100, subsample=0.5)),
+	    RFE(estimator=ExtraTreesClassifier(criterion="gini", max_features=0.5, n_estimators=100), step=0.9000000000000001),
+	    RandomForestClassifier(bootstrap=True, criterion="gini", max_features=0.25, min_samples_leaf=14, min_samples_split=2, n_estimators=100)
+		)
 
-	
-
-
-	#tpot.fit(X_train, y_train)
-	#print(tpot.score(X_test, y_test))
-	#tpot.export('tpot_model.py')
-
-	exported_pipeline = make_pipeline(
-    StackingEstimator(estimator=GradientBoostingClassifier(learning_rate=0.1, max_depth=3, max_features=0.7500000000000001, min_samples_leaf=17, min_samples_split=17, n_estimators=100, subsample=0.5)),
-    RFE(estimator=ExtraTreesClassifier(criterion="gini", max_features=0.5, n_estimators=100), step=0.9000000000000001),
-    RandomForestClassifier(bootstrap=True, criterion="gini", max_features=0.25, min_samples_leaf=14, min_samples_split=2, n_estimators=100)
-	)
-
-	exported_pipeline.fit(X_train, y_train)
-	model_results['Training'] = {'prediction':exported_pipeline.predict(X_test), 'actual':y_test}
+		exported_pipeline.fit(X_train, y_train)
+		model_results['Training'] = {'prediction':exported_pipeline.predict(X_test), 'actual':y_test}
 
 
-	kfold_splits = 10
-	kf = KFold(n_splits=kfold_splits)
-	for train, test in kf.split(X_train):
-		exported_pipeline.fit(X_train[train], y_train[train])
-		model_results['KFold'].append({'prediction':exported_pipeline.predict(X_train[test]), 'actual':y_train[test]})
+		kfold_splits = 10
+		kf = KFold(n_splits=kfold_splits)
+		for train, test in kf.split(X_train):
+			exported_pipeline.fit(X_train[train], y_train[train])
+			model_results['KFold'].append({'prediction':exported_pipeline.predict(X_train[test]), 'actual':y_train[test]})
 
-	#print(model_results['GDC'][0],len(model_results['GDC']))
-	#print(model_results['GDC'][0][0])
-	#average =[sum(x[0])/len(model_results['GDC']) for x in model_results['GDC']]
-	#print(average)
-	#for model in model_results:
-	#	print(model)
-	#	average = 0
-	#	average = [(average+value[0])/len(model_results[model]) for value in model_results[model]]
-	#	print(sum(average))
+		#print(model_results['GDC'][0],len(model_results['GDC']))
+		#print(model_results['GDC'][0][0])
+		#average =[sum(x[0])/len(model_results['GDC']) for x in model_results['GDC']]
+		#print(average)
+		#for model in model_results:
+		#	print(model)
+		#	average = 0
+		#	average = [(average+value[0])/len(model_results[model]) for value in model_results[model]]
+		#	print(sum(average))
 
-	print('Training Accuracy Score: ',accuracy_score(model_results['Training']['actual'],model_results['Training']['prediction']))
-	print('Training f1 macro Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='macro'))
-	print('Training f1 micro Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='micro'))
-	print('Training f1 weighted Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
-	print('Training Precision Score: ',precision_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
-	print('Training Recall Score: ',recall_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
+		print('Training Accuracy Score: ',accuracy_score(model_results['Training']['actual'],model_results['Training']['prediction']))
+		print('Training f1 macro Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='macro'))
+		print('Training f1 micro Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='micro'))
+		print('Training f1 weighted Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
+		print('Training Precision Score: ',precision_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
+		print('Training Recall Score: ',recall_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
 
-	print('KFold Average Accuracy Score: '+str(sum([accuracy_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction']) for x in range(0,kfold_splits)])/kfold_splits))
-	print('KFold f1 macro Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='macro') for x in range(0,kfold_splits)])/kfold_splits))
-	print('KFold f1 micro Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='micro') for x in range(0,kfold_splits)])/kfold_splits))
-	print('KFold f1 weighted Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
-	print('KFold Precision Score: '+str(sum([precision_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
-	print('KFold Recall Score: '+str(sum([recall_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
-	#for entry in model_results['KFold']:
-	#	print(accuracy_score(entry['actual'], entry['prediction']))
-			
-			
+		print('KFold Average Accuracy Score: '+str(sum([accuracy_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction']) for x in range(0,kfold_splits)])/kfold_splits))
+		print('KFold f1 macro Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='macro') for x in range(0,kfold_splits)])/kfold_splits))
+		print('KFold f1 micro Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='micro') for x in range(0,kfold_splits)])/kfold_splits))
+		print('KFold f1 weighted Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+		print('KFold Precision Score: '+str(sum([precision_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+		print('KFold Recall Score: '+str(sum([recall_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+		#for entry in model_results['KFold']:
+		#	print(accuracy_score(entry['actual'], entry['prediction']))
+				
+				
 
 
 
@@ -190,5 +186,5 @@ if __name__ == "__main__":
 		classifyData(data, method)
 	else:
 		print('Classifying '+ data +' with TPOT')
-		classifyData(data, 'none')
+		classifyData(data, 'tpot')
 	print('Done')
