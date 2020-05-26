@@ -186,11 +186,11 @@ def extractFeatures(text, lang=['en','en-US']):
 def analyzeText(file, filetype, family='none', lang='none', category='none', limit=0):
 	textFiltered = []
 	if(filetype == 'reddit'):
-		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=1, encoding="utf-8-sig")
-		textImported.columns = ['user','subreddit','post','lang','family']
+		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=0, encoding="utf-8-sig")
+		textImported.columns = ['user','subreddit','post','family','lang']
 		textImported = textImported[textImported.user.str.contains('user') == False].reset_index()
 	else:
-		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=1, encoding="utf-8-sig")
+		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=0, encoding="utf-8-sig")
 		textImported.columns = ['text','lang']
 		textImported = textImported[textImported.text.str.contains('text') == False].reset_index()
 	num_row = 0	
@@ -235,7 +235,7 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 		textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user': textUser}])
 		num_row += 1
 		if((num_row % 100) == 0):
-			print(num_row+' / '+len(textImported))
+			print(str(num_row)+' / '+str(len(textImported)))
 
 	text_POS = []
 	num_row = 0
@@ -287,9 +287,9 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 							print(word.pos)
 						current.append([word.text, postag])
 			text_POS.append(current)
-		num_row += 1
-		if((num_row % 100) == 0):
-			print(num_row+' / '+len(textFiltered))
+			num_row += 1
+			if((num_row % 100) == 0):
+				print(str(num_row)+' / '+str(len(textFiltered)))
 
 	else:
 		text_POS = runPOSTagger(text[0]['originalSentence'] for text in textFiltered)
