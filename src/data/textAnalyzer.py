@@ -183,27 +183,24 @@ def extractFeatures(text, lang=['en','en-US']):
 #						+word 2-grams
 #	=================================================================	
 
-def analyzeText(file, filetype, family='none', lang='none', category='none', limit='none'):
+def analyzeText(file, filetype, family='none', lang='none', category='none', limit=0):
 	textFiltered = []
-	textImported = []
-	textUser = []
-	textPost = []
 	if(filetype == 'reddit'):
-		if(limit == 'none'):
-			textImported = pd.read_csv(file, header=0, sep=',', usecols=['user','post'])
-		else:
-			textImported = pd.read_csv(file, header=0, nrows=int(limit), sep=',', usecols=['user','post'])
+		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=1, encoding="utf-8-sig")
+		textImported.columns = ['user','subreddit','post','lang','family']
+		textImported = textImported[textImported.user.str.contains('user') == False].reset_index()
 	else:
-		if(limit == 'none'):
-			textImported = pd.read_csv(file, header=0, sep=',', usecols=['text','lang'])
-		else:
-			textImported = pd.read_csv(file, header=0, nrows=int(limit), sep=',', usecols=['text','lang'])
+		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=1, encoding="utf-8-sig")
+		textImported.columns = ['text','lang']
+		textImported = textImported[textImported.text.str.contains('text') == False].reset_index()
 	num_row = 0	
 	
 	while num_row < len(textImported):
 		if(filetype == 'reddit'): 
 			textPost = textImported.at[num_row, 'post']
 			textUser = textImported.at[num_row, 'user']
+			lang = textImported.at[num_row, 'lang']
+			family = textImported.at[num_row, 'family']
 		else:
 			textPost = textImported.at[num_row, 'text']
 			textUser = " "
@@ -237,8 +234,11 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 
 		textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user': textUser}])
 		num_row += 1
+		if((num_row % 100) == 0):
+			print(num_row+' / '+len(textImported))
 
 	text_POS = []
+	num_row = 0
 	if(filetype == 'reddit'):
 		stanza.download('en')
 		nlp = stanza.Pipeline('en', processors='tokenize,pos')
@@ -286,8 +286,10 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 						else:
 							print(word.pos)
 						current.append([word.text, postag])
-			print(current)
 			text_POS.append(current)
+		num_row += 1
+		if((num_row % 100) == 0):
+			print(num_row+' / '+len(textFiltered))
 
 	else:
 		text_POS = runPOSTagger(text[0]['originalSentence'] for text in textFiltered)
@@ -370,7 +372,7 @@ if __name__ == "__main__":
 
 	fields = [ 'correctedSentence','originalSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
 	if(filetype == 'reddit'):
-		filename = 'output/result'+path.split('/')[-1].split('.')[1]+path.split('/')[-1].split('.')[3]+ '.csv'
+		filename = 'output/result_'+path.split('_')[1]+'.csv'
 	else:
 		filename = 'output/result_'+lang+'_'+category+'.csv'
 	os.makedirs(os.path.dirname(filename), exist_ok=True)

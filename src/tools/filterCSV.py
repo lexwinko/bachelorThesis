@@ -10,34 +10,13 @@ from collections import OrderedDict
 file = ""
 filters = ""
 
-def filterCSV(file, filters):
-	txt_Import = pd.read_csv(file, header=0, sep=';', usecols=['username','text'])
+def tagCSV(file, family, lang):
+	txt_Import = pd.read_csv(file, header=0, sep=',')
 
-	usernames = []
-	with open(filters, "r", encoding='utf-8') as f:
-		for x in f:
-			print(x)
-			usernames.append(x.split()[0])
-	print(usernames)
+	txt_Import['family'] = family
+	txt_Import['lang'] = lang
 
-	tweets = txt_Import.loc[txt_Import['username'].isin(usernames)]
-
-	filteredText = []
-	for tweet in tweets['text']:
-		print(tweet)
-		tweet = tweet.replace('\xa0', ' ')
-		tweet = tweet.replace('\n', ' ')
-		filteredText.append(tweet)
-
-	print(filteredText)
-	print(len(filteredText))
-
-	with open('filtered'+file, "w") as f:
-		w = csv.writer(f)
-		w.writerow(['text'])
-		for x in filteredText:
-			print(x + "\n")
-			w.writerow([x])
+	txt_Import.to_csv('tagged_'+file.split('_')[0]+'.csv',index=False)
 
 
 def splitFile(file, ratio):
@@ -64,7 +43,7 @@ def splitFile(file, ratio):
 	split_r.to_csv("output/split_"+file.split('/')[1].split('.')[0].split('_')[1]+"_upper.csv", index=False)
 
 
-def ngramModel(file, limit):
+def ngramModel(file, limit, origin):
 	txt_Import = pd.read_csv(file, header=None, sep=',', skiprows=1)
 	txt_Import.columns = ['correctedSentence', 'originalSentence', 'elongated','caps','sentenceLength','sentenceWordLength','spellDelta', 'charTrigrams','wordBigrams','wordUnigrams', 'hashtag', 'url', 'atUser','#','@','E',',','~','U','A','D','!','N','P','O','R','&','L','Z','^','V','$','G','T','X','S','Y','M', 'langFam', 'lang', 'user']
 	txt_Import = txt_Import[txt_Import.correctedSentence.str.contains('correctedSentence') == False]
@@ -131,7 +110,7 @@ def ngramModel(file, limit):
 		ngrams_limited[lang]['wordUnigrams'] = list(ngrams_descending[lang]['wordUnigrams'])[:max(1,int(limit))]
 	
 	for lang in ngrams_limited:
-		filename = "output/ngrams_"+lang+".csv"
+		filename = "output/ngrams_"+origin+"_"+lang+".csv"
 		with open(filename, "w") as f:
 			fieldnames = ['charTrigrams', 'wordBigrams', 'wordUnigrams']
 			writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -139,7 +118,7 @@ def ngramModel(file, limit):
 			for entry in range(0,min(len(ngrams_limited[lang]['charTrigrams']),len(ngrams_limited[lang]['wordBigrams']),len(ngrams_limited[lang]['wordUnigrams']),int(limit))):
 				writer.writerow({'charTrigrams': ngrams_limited[lang]['charTrigrams'][entry][0], 'wordBigrams': ngrams_limited[lang]['wordBigrams'][entry][0] , 'wordUnigrams': ngrams_limited[lang]['wordUnigrams'][entry][0]})
 
-def createClassifierFile(file):
+def createClassifierFile(file,filters):
 	data = pd.read_csv(file, header=0, sep=',')
 	lang = ['French', 'German', 'Greek', 'English', 'Indian', 'Japanese', 'Russian', 'Turkish']
 	ngrams = ['charTrigrams','wordBigrams','wordUnigrams', 'lang']
@@ -253,7 +232,7 @@ def createClassifierFile(file):
 				data.loc[index, 'wordBigrams_similarity_'+str(language)] = similarity[language]['wordBigrams']
 				data.loc[index, 'wordUnigrams_similarity_'+str(language)] = similarity[language]['wordUnigrams']
 
-	data.to_csv("output/classification_data.csv", index=False)
+	data.to_csv("output/classification_data_"+filters+".csv", index=False)
 
 def getNGramSimilarity(ngrams, data):
 	#print("similarity")
@@ -272,17 +251,19 @@ if __name__ == "__main__":
 		func = sys.argv[2]
 	if(len(sys.argv) > 3):
 		filters = sys.argv[3]
-	if(func == 'filter'):
-		print('Filtering '+ file + ' with filters: '+filters)
-		filterCSV(file, filters)
+	if(len(sys.argv) > 4):
+		arg2 = sys.argv[4]
+	if(func == 'tag'):
+		print('Tagging '+ file + ' with filters: '+filters+', '+arg2)
+		tagCSV(file, filters, arg2)
 	elif(func == 'split'):
 		print('Splitting '+ file + ' with size: ' +filters)
 		splitFile(file,filters)
 	elif(func == 'ngram'):
 		print('Creating ngram model '+ file + ' with limit: ' +filters)
-		ngramModel(file,filters)
+		ngramModel(file,filters,arg2)
 	elif(func == 'classifier'):
-		print('Creating classification file')
-		createClassifierFile(file)
+		print('Creating classification file for ' +filters)
+		createClassifierFile(file,filters)
 	print('Done')
 	#print(result)
