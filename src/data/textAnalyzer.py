@@ -372,7 +372,7 @@ if __name__ == "__main__":
 
 	fields = [ 'correctedSentence','originalSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
 	if(filetype == 'reddit'):
-		filename = 'output/result_'+path.split('_')[1]+'.csv'
+		filename = 'output/result_'+path.split('_')[1]
 	else:
 		filename = 'output/result_'+lang+'_'+category+'.csv'
 	os.makedirs(os.path.dirname(filename), exist_ok=True)
