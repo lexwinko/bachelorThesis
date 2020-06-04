@@ -39,8 +39,8 @@ def splitFile(file, ratio):
 
 	split_l = pd.DataFrame(split_l,columns=[ 'correctedSentence','originalSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user'])
 	split_r = pd.DataFrame(split_r,columns=[ 'correctedSentence','originalSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user'])
-	split_l.to_csv("output/split_"+file.split('/')[1].split('.')[0].split('_')[1]+"_lower.csv", index=False)
-	split_r.to_csv("output/split_"+file.split('/')[1].split('.')[0].split('_')[1]+"_upper.csv", index=False)
+	split_l.to_csv("output/split_lower.csv", index=False)
+	split_r.to_csv("output/split_upper.csv", index=False)
 
 
 def ngramModel(file, limit, origin):
@@ -51,7 +51,33 @@ def ngramModel(file, limit, origin):
 	txt_Import = txt_Import[used_features]
 
 	grouped = txt_Import.groupby('lang',as_index=False)
-	ngrams = {'German':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 'Greek':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 'French':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 'Indian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 'Japanese':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 'Russian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 'Turkish':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 'English':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}}
+	ngrams = {
+			'German':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 
+			'Greek':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 
+			'French':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 
+			'Indian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 
+			'Japanese':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 
+			'Russian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 
+			'Turkish':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 
+			'Bulgarian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Croatian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Czech':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}, 
+			'Lithuanian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Polish':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Serbian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Slovene':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Finnish':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Dutch':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Norwegian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Swedish':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Italian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Spanish':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Portugese':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Romanian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Estonian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'Hungarian':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}},
+			'English':{'charTrigrams':{},'wordBigrams':{},'wordUnigrams':{}}
+			}
 	for x in grouped.groups:
 		current = grouped.get_group(x)
 		current.reset_index(drop=True,inplace=True)
@@ -96,14 +122,66 @@ def ngramModel(file, limit, origin):
 				else:
 					ngrams[current['lang'].values[0]]['wordUnigrams'][wordList[chars]] += 1
 
-	ngrams_descending = OrderedDict([('German',{}),('Greek',{}),('French',{}),('Indian',{}),('Japanese',{}),('Russian',{}),('Turkish',{}),('English',{})])
+	ngrams_descending = OrderedDict([
+					('German',{}),
+					('Greek',{}),
+					('French',{}),
+					('Indian',{}),
+					('Japanese',{}),
+					('Russian',{}),
+					('Turkish',{}),
+					('Bulgarian',{}),
+					('Croatian',{}),
+					('Czech',{}),
+					('Lithuanian',{}),
+					('Polish',{}),
+					('Serbian',{}),
+					('Slovene',{}),
+					('Finnish',{}),
+					('Dutch',{}),
+					('Norwegian',{}),
+					('Swedish',{}),
+					('Italian',{}),
+					('Spanish',{}),
+					('Portugese',{}),
+					('Romanian',{}),
+					('Estonian',{}),
+					('Hungarian',{}),
+					('English',{})
+					])
 	for lang in ngrams:
 		ngrams_descending[lang]['charTrigrams'] = sorted(ngrams[lang]['charTrigrams'].items(), key=lambda t: t[1], reverse=True)
 		ngrams_descending[lang]['wordBigrams'] = sorted(ngrams[lang]['wordBigrams'].items(), key=lambda t: t[1], reverse=True)
 		ngrams_descending[lang]['wordUnigrams'] = sorted(ngrams[lang]['wordUnigrams'].items(), key=lambda t: t[1], reverse=True)
 
 
-	ngrams_limited = OrderedDict([('German',{}),('Greek',{}),('French',{}),('Indian',{}),('Japanese',{}),('Russian',{}),('Turkish',{}),('English',{})])
+	ngrams_limited = OrderedDict([
+					('German',{}),
+					('Greek',{}),
+					('French',{}),
+					('Indian',{}),
+					('Japanese',{}),
+					('Russian',{}),
+					('Turkish',{}),
+					('Bulgarian',{}),
+					('Croatian',{}),
+					('Czech',{}),
+					('Lithuanian',{}),
+					('Polish',{}),
+					('Serbian',{}),
+					('Slovene',{}),
+					('Finnish',{}),
+					('Dutch',{}),
+					('Norwegian',{}),
+					('Swedish',{}),
+					('Italian',{}),
+					('Spanish',{}),
+					('Portugese',{}),
+					('Romanian',{}),
+					('Estonian',{}),
+					('Hungarian',{}),
+					('English',{})
+					])
 	for lang in ngrams:
 		ngrams_limited[lang]['charTrigrams'] = list(ngrams_descending[lang]['charTrigrams'])[:max(1,int(limit))]
 		ngrams_limited[lang]['wordBigrams'] = list(ngrams_descending[lang]['wordBigrams'])[:max(1,int(limit))]
@@ -119,8 +197,36 @@ def ngramModel(file, limit, origin):
 				writer.writerow({'charTrigrams': ngrams_limited[lang]['charTrigrams'][entry][0], 'wordBigrams': ngrams_limited[lang]['wordBigrams'][entry][0] , 'wordUnigrams': ngrams_limited[lang]['wordUnigrams'][entry][0]})
 
 def createClassifierFile(file,filters):
-	data = pd.read_csv(file, header=0, sep=',')
-	lang = ['French', 'German', 'Greek', 'English', 'Indian', 'Japanese', 'Russian', 'Turkish']
+	data = pd.read_csv(file, header=None, sep=',', skiprows=1)
+	data.columns = ['correctedSentence', 'originalSentence', 'elongated','caps','sentenceLength','sentenceWordLength','spellDelta', 'charTrigrams','wordBigrams','wordUnigrams', 'hashtag', 'url', 'atUser','#','@','E',',','~','U','A','D','!','N','P','O','R','&','L','Z','^','V','$','G','T','X','S','Y','M', 'langFam', 'lang', 'user']
+	data = data[data.correctedSentence.str.contains('correctedSentence') == False]
+	lang = [
+			'French', 
+			'German', 
+			'Greek', 
+			'English', 
+			'Indian', 
+			'Japanese', 
+			'Russian', 
+			'Turkish', 
+			'Bulgarian',
+			'Croatian',
+			'Czech',
+			'Lithuanian',
+			'Polish',
+			'Serbian',
+			'Slovene',
+			'Finnish',
+			'Dutch',
+			'Norwegian',
+			'Swedish',
+			'Italian',
+			'Spanish',
+			'Portugese',
+			'Romanian',
+			'Estonian',
+			'Hungarian'
+			]
 	ngrams = ['charTrigrams','wordBigrams','wordUnigrams', 'lang']
 	features_similarity = [	'charTrigrams_similarity_French',
 							'wordBigrams_similarity_French',
@@ -143,40 +249,149 @@ def createClassifierFile(file,filters):
 							'charTrigrams_similarity_Turkish',
 							'wordBigrams_similarity_Turkish',
 							'wordUnigrams_similarity_Turkish',
+							'charTrigrams_similarity_Bulgarian',
+							'wordBigrams_similarity_Bulgarian',
+							'wordUnigrams_similarity_Bulgarian',
+							'charTrigrams_similarity_Croatian',
+							'wordBigrams_similarity_Croatian',
+							'wordUnigrams_similarity_Croatian',
+							'charTrigrams_similarity_Czech',
+							'wordBigrams_similarity_Czech',
+							'wordUnigrams_similarity_Czech',
+							'charTrigrams_similarity_Lithuanian',
+							'wordBigrams_similarity_Lithuanian',
+							'wordUnigrams_similarity_Lithuanian',
+							'charTrigrams_similarity_Polish',
+							'wordBigrams_similarity_Polish',
+							'wordUnigrams_similarity_Polish',
+							'charTrigrams_similarity_Serbian',
+							'wordBigrams_similarity_Serbian',
+							'wordUnigrams_similarity_Serbian',
+							'charTrigrams_similarity_Slovene',
+							'wordBigrams_similarity_Slovene',
+							'wordUnigrams_similarity_Slovene',
+							'charTrigrams_similarity_Finnish',
+							'wordBigrams_similarity_Finnish',
+							'wordUnigrams_similarity_Finnish',
+							'charTrigrams_similarity_Dutch',
+							'wordBigrams_similarity_Dutch',
+							'wordUnigrams_similarity_Dutch',
+							'charTrigrams_similarity_Norwegian',
+							'wordBigrams_similarity_Norwegian',
+							'wordUnigrams_similarity_Norwegian',
+							'charTrigrams_similarity_Swedish',
+							'wordBigrams_similarity_Swedish',
+							'wordUnigrams_similarity_Swedish',
+							'charTrigrams_similarity_Italian',
+							'wordBigrams_similarity_Italian',
+							'wordUnigrams_similarity_Italian',
+							'charTrigrams_similarity_Spanish',
+							'wordBigrams_similarity_Spanish',
+							'wordUnigrams_similarity_Spanish',
+							'charTrigrams_similarity_Portugese',
+							'wordBigrams_similarity_Portugese',
+							'wordUnigrams_similarity_Portugese',
+							'charTrigrams_similarity_Romanian',
+							'wordBigrams_similarity_Romanian',
+							'wordUnigrams_similarity_Romanian',
+							'charTrigrams_similarity_Estonian',
+							'wordBigrams_similarity_Estonian',
+							'wordUnigrams_similarity_Estonian',
+							'charTrigrams_similarity_Hungarian',
+							'wordBigrams_similarity_Hungarian',
+							'wordUnigrams_similarity_Hungarian',
 							'charTrigrams_similarity_English',
 							'wordBigrams_similarity_English',
-							'wordUnigrams_similarity_English']
+							'wordUnigrams_similarity_English'
+							]
 
 	for feature in features_similarity:
 		data[feature] = 0
 
 
-	ngram_data = {	'French':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()}, 
+	ngram_data = {	
+					'French':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()}, 
 					'German':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()}, 
 					'Greek':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()}, 
 					'English':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
 					'Indian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()}, 
 					'Japanese':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()}, 
 					'Russian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()}, 
-					'Turkish':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()}}
+					'Turkish':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Bulgarian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Croatian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Czech':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Lithuanian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Polish':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Serbian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Slovene':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Finnish':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Dutch':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Norwegian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Swedish':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Italian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Spanish':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Portugese':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Romanian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Estonian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()},
+					'Hungarian':{'charTrigrams':NGram(),'wordBigrams':NGram(),'wordUnigrams':NGram()}
+					}
 	for language in lang:
 		raw_ngrams = []
-		if(language == 'French'):
-			raw_ngrams = pd.read_csv('../../data/processed/France/ngrams_French.csv', header=0)
-		elif(language == 'German'):
-			raw_ngrams = pd.read_csv('../../data/processed/Germany/ngrams_German.csv', header=0)
-		elif(language == 'Greek'):
-			raw_ngrams = pd.read_csv('../../data/processed/Greece/ngrams_Greek.csv', header=0)
-		elif(language == 'Indian'):
-			raw_ngrams = pd.read_csv('../../data/processed/India/ngrams_Indian.csv', header=0)
-		elif(language == 'Japanese'):
-			raw_ngrams = pd.read_csv('../../data/processed/Japan/ngrams_Japanese.csv', header=0)
-		elif(language == 'Russian'):
-			raw_ngrams = pd.read_csv('../../data/processed/Russia/ngrams_Russian.csv', header=0)
-		elif(language == 'Turkish'):
-			raw_ngrams = pd.read_csv('../../data/processed/Turkey/ngrams_Turkish.csv', header=0)
+		if(filters == 'reddit'):
+			extension = 'reddit_'
 		else:
-			raw_ngrams = pd.read_csv('../../data/processed/Native/ngrams_English.csv', header=0)
+			extension = ''
+		if(language == 'French'):
+			raw_ngrams = pd.read_csv('../../data/processed/France/ngrams_'+extension+'French.csv', header=0)
+		elif(language == 'German'):
+			raw_ngrams = pd.read_csv('../../data/processed/Germany/ngrams_'+extension+'German.csv', header=0)
+		elif(language == 'Greek'):
+			raw_ngrams = pd.read_csv('../../data/processed/Greece/ngrams_'+extension+'Greek.csv', header=0)
+		elif(language == 'Indian'):
+			raw_ngrams = pd.read_csv('../../data/processed/India/ngrams_'+extension+'Indian.csv', header=0)
+		elif(language == 'Japanese'):
+			raw_ngrams = pd.read_csv('../../data/processed/Japan/ngrams_'+extension+'Japanese.csv', header=0)
+		elif(language == 'Russian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Russia/ngrams_'+extension+'Russian.csv', header=0)
+		elif(language == 'Turkish'):
+			raw_ngrams = pd.read_csv('../../data/processed/Turkey/ngrams_'+extension+'Turkish.csv', header=0)
+		elif(language == 'Bulgaria'):
+			raw_ngrams = pd.read_csv('../../data/processed/Bulgaria/ngrams_Bulgarian.csv', header=0)
+		elif(language == 'Croatian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Croatia/ngrams_Croatian.csv', header=0)
+		elif(language == 'Czech'):
+			raw_ngrams = pd.read_csv('../../data/processed/Czech/ngrams_Czech.csv', header=0)
+		elif(language == 'Lithuanian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Lithuania/ngrams_Lithuanian.csv', header=0)
+		elif(language == 'Polish'):
+			raw_ngrams = pd.read_csv('../../data/processed/Poland/ngrams_Polish.csv', header=0)
+		elif(language == 'Serbian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Serbia/ngrams_Serbian.csv', header=0)
+		elif(language == 'Slovene'):
+			raw_ngrams = pd.read_csv('../../data/processed/Slovenia/ngrams_Slovene.csv', header=0)
+		elif(language == 'Finnish'):
+			raw_ngrams = pd.read_csv('../../data/processed/Finland/ngrams_Finnish.csv', header=0)
+		elif(language == 'Dutch'):
+			raw_ngrams = pd.read_csv('../../data/processed/Netherlands/ngrams_Dutch.csv', header=0)
+		elif(language == 'Norwegian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Norway/ngrams_Norwegian.csv', header=0)
+		elif(language == 'Swedish'):
+			raw_ngrams = pd.read_csv('../../data/processed/Sweden/ngrams_Swedish.csv', header=0)
+		elif(language == 'Italian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Italy/ngrams_Italian.csv', header=0)
+		elif(language == 'Spanish'):
+			raw_ngrams = pd.read_csv('../../data/processed/Spain/ngrams_Spanish.csv', header=0)
+		elif(language == 'Portugese'):
+			raw_ngrams = pd.read_csv('../../data/processed/Portugal/ngrams_Portugese.csv', header=0)
+		elif(language == 'Romanian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Romania/ngrams_Romanian.csv', header=0)
+		elif(language == 'Estonian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Estonia/ngrams_Estonian.csv', header=0)
+		elif(language == 'Hungarian'):
+			raw_ngrams = pd.read_csv('../../data/processed/Hungary/ngrams_Hungarian.csv', header=0)
+		else:
+			raw_ngrams = pd.read_csv('../../data/processed/Native/ngrams_'+extension+'English.csv', header=0)
 		
 		for entry in raw_ngrams['charTrigrams']:
 			ngram_data[language]['charTrigrams'].add(str(entry))
@@ -190,7 +405,6 @@ def createClassifierFile(file,filters):
 		current = grouped.get_group(x)
 		print('Current language: '+x)
 		for index, row in current.iterrows():
-			print(index)
 			ngram_current = {'charTrigrams':NGram(), 'wordBigrams':NGram(), 'wordUnigrams':NGram()}
 			ngramlist = row['charTrigrams'].split(',')
 			for entry in range(0, len(ngramlist)):
@@ -217,14 +431,33 @@ def createClassifierFile(file,filters):
 				ngramlist[entry] = ngramlist[entry].lower()
 				ngram_current['wordUnigrams'].add(str(ngramlist[entry]))
 
-			similarity = {	'French':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0}, 
+			similarity = {	
+						'French':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0}, 
 						'German':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0}, 
 						'Greek':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0}, 
 						'English':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
 						'Indian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0}, 
 						'Japanese':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0}, 
 						'Russian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0}, 
-						'Turkish':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0}}
+						'Turkish':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Bulgarian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Croatian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Czech':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Lithuanian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Polish':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Serbian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Slovene':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Finnish':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Dutch':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Norwegian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Swedish':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Italian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Spanish':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Portugese':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Romanian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Estonian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0},
+						'Hungarian':{'charTrigrams':0,'wordBigrams':0,'wordUnigrams':0}
+						}
 
 			for language in lang:
 				similarity[language] = getNGramSimilarity(ngram_current, ngram_data[language])
@@ -247,6 +480,8 @@ def getNGramSimilarity(ngrams, data):
 
 if __name__ == "__main__":
 	file = sys.argv[1]
+	filters = 'none'
+	arg2 = 'none'
 	if(len(sys.argv) > 2):
 		func = sys.argv[2]
 	if(len(sys.argv) > 3):
