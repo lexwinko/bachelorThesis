@@ -147,8 +147,8 @@ def extractFeatures(text, lang=['en','en-US']):
 	sentenceSpellDelta = (aspellDelta + langCheckDelta) / 2.0
 
 	sentence = ' '.join(correctedSentence)
-	sentenceLength = len(correctedSentence)
-	sentenceWordLength = sum(map(len, [x for x in correctedSentence])) / max(1,sentenceLength)
+	sentenceLength = len(originalText)
+	sentenceWordLength = sum(map(len, [x for x in originalText])) / max(1,sentenceLength)
 
 
 	tokenizer = RegexpTokenizer("[a-zA-Z]+")

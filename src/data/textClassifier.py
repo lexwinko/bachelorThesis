@@ -18,11 +18,20 @@ from tpot.export_utils import set_param_recursive
 from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, RandomForestClassifier
 from sklearn.feature_selection import RFE
 from sklearn.pipeline import make_pipeline, make_union
+from sklearn.dummy import DummyClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import LinearSVC
+from sklearn.tree import DecisionTreeClassifier
+
+import matplotlib.pyplot as plt
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import plot_confusion_matrix
 
 
 def classifyData(file, method, source):
@@ -104,7 +113,7 @@ def classifyData(file, method, source):
 					'wordBigrams_similarity_English',
 					'wordUnigrams_similarity_English']
 	data = data[data.correctedSentence.str.contains('correctedSentence') == False]
-	data.sample(frac=1., random_state=42)
+	data.sample(random_state=42)
 	classes = pd.get_dummies(pd.Series(list(data['lang'])))
 	
 	sentence = ['correctedSentence', 'originalSentence']
@@ -141,11 +150,11 @@ def classifyData(file, method, source):
 						'sentenceWordLength',
 						'spellDelta',
 						'#',
-						'@',
-						'E',
+						#'@',
+						#'E',
 						',',
-						'~',
-						'U',
+						#'~',
+						#'U',
 						'A',
 						'D',
 						'!',
@@ -154,17 +163,17 @@ def classifyData(file, method, source):
 						'O',
 						'R',
 						'&',
-						'L',
-						'Z',
+						#'L',
+						#'Z',
 						'^',
 						'V',
 						'$',
 						'G',
 						'T',
-						'X',
-						'S',
-						'Y',
-						'M',
+						#'X',
+						#'S',
+						#'Y',
+						#'M',
 						'charTrigrams_similarity_French',
 						'wordBigrams_similarity_French',
 						'wordUnigrams_similarity_French',
@@ -310,13 +319,49 @@ def classifyData(file, method, source):
 	X_train, X_test, y_train, y_test = train_test_split(featuredata, labeldata, test_size=0.3)
 	
 
-	model_results = {'Training':[], 'KFold':[]}
+	model_results = {	'Dummy':{'Training':[], 'KFold':[]},
+						'DTC':{'Training':[], 'KFold':[]},
+						'RFC':{'Training':[], 'KFold':[]},
+						'XGB':{'Training':[], 'KFold':[]},
+					 	'TwitterPipeline':{'Training':[], 'KFold':[]},
+					 	'TwitterPipeline2':{'Training':[], 'KFold':[]}}
 
 	if(method == 'tpot'):
 		tpot = TPOTClassifier(generations=5, population_size=20, verbosity=2, cv=10, random_state=42)
 		tpot.fit(X_train, y_train)
 		print(tpot.score(X_test, y_test))
 		tpot.export('tpot_model.py')
+	elif(method == 'importance'):
+
+		model = DecisionTreeClassifier()
+		model.fit(X_train, y_train)
+		importance = model.feature_importances_
+		for i,v in enumerate(importance):
+			print('Feature: %0d, Score: %.5f' % (i,v))
+		plt.bar([features[x] for x in range(len(importance))], importance)
+		plt.tight_layout()
+		plt.xticks(rotation=90)
+		plt.show()
+
+		model = RandomForestClassifier()
+		model.fit(X_train, y_train)
+		importance = model.feature_importances_
+		for i,v in enumerate(importance):
+			print('Feature: %0d, Score: %.5f' % (i,v))
+		plt.bar([features[x] for x in range(len(importance))], importance)
+		plt.tight_layout()
+		plt.xticks(rotation=90)
+		plt.show()
+
+		model = XGBClassifier()
+		model.fit(X_train, y_train)
+		importance = model.feature_importances_
+		for i,v in enumerate(importance):
+			print('Feature: %0d, Score: %.5f' % (i,v))
+		plt.bar([features[x] for x in range(len(importance))], importance)
+		plt.tight_layout()
+		plt.xticks(rotation=90)
+		plt.show()
 	else:
 		exported_pipeline = make_pipeline(
 	    StackingEstimator(estimator=GradientBoostingClassifier(learning_rate=0.1, max_depth=3, max_features=0.7500000000000001, min_samples_leaf=17, min_samples_split=17, n_estimators=100, subsample=0.5)),
@@ -325,14 +370,72 @@ def classifyData(file, method, source):
 		)
 
 		exported_pipeline.fit(X_train, y_train)
-		model_results['Training'] = {'prediction':exported_pipeline.predict(X_test), 'actual':y_test}
+		plot_confusion_matrix(exported_pipeline, X_test, y_test, display_labels=lang,normalize=None,  values_format='d', xticks_rotation='vertical',cmap=plt.cm.Blues)
+		plt.tight_layout()
+		plt.savefig('pipeline_'+source, dpi=300)
+		model_results['TwitterPipeline']['Training'] = {'prediction':exported_pipeline.predict(X_test), 'actual':y_test}
+
+		# Dummy Most Frequent
+		dummy_clf = DummyClassifier(strategy="stratified", random_state=42)
+		dummy_clf.fit(X_train, y_train)
+		plot_confusion_matrix(dummy_clf,X_test, y_test, display_labels=lang,normalize=None,values_format='d', xticks_rotation='vertical', cmap=plt.cm.Blues)
+		plt.tight_layout()
+		plt.savefig('dummyStratified_'+source, dpi=300)
+		model_results['Dummy']['Training'] = {'prediction':dummy_clf.predict(X_test), 'actual':y_test}
+
+		dummy_clf = DummyClassifier(strategy="most_frequent", random_state=42)
+		dummy_clf.fit(X_train, y_train)
+		plot_confusion_matrix(dummy_clf,X_test, y_test, display_labels=lang,normalize=None,values_format='d', xticks_rotation='vertical', cmap=plt.cm.Blues)
+		plt.tight_layout()
+		plt.savefig('dummyMF_'+source, dpi=300)
 
 
-		kfold_splits = 10
-		kf = KFold(n_splits=kfold_splits)
-		for train, test in kf.split(X_train):
-			exported_pipeline.fit(X_train[train], y_train[train])
-			model_results['KFold'].append({'prediction':exported_pipeline.predict(X_train[test]), 'actual':y_train[test]})
+		model = DecisionTreeClassifier()
+		model.fit(X_train, y_train)
+		plot_confusion_matrix(model,X_test, y_test, display_labels=lang,normalize=None,values_format='d', xticks_rotation='vertical', cmap=plt.cm.Blues)
+		plt.tight_layout()
+		plt.savefig('DTC_'+source, dpi=300)
+		model_results['DTC']['Training'] = {'prediction':model.predict(X_test), 'actual':y_test}
+
+
+		model = RandomForestClassifier()
+		model.fit(X_train, y_train)
+		plot_confusion_matrix(model,X_test, y_test, display_labels=lang,normalize=None,values_format='d', xticks_rotation='vertical', cmap=plt.cm.Blues)
+		plt.tight_layout()
+		plt.savefig('RFC_'+source, dpi=300)
+		model_results['RFC']['Training'] = {'prediction':model.predict(X_test), 'actual':y_test}
+
+
+		model = XGBClassifier()
+		model.fit(X_train, y_train)
+		plot_confusion_matrix(model,X_test, y_test, display_labels=lang,normalize=None,values_format='d', xticks_rotation='vertical', cmap=plt.cm.Blues)
+		plt.tight_layout()
+		plt.savefig('XGB_'+source, dpi=300)
+		model_results['XGB']['Training'] = {'prediction':model.predict(X_test), 'actual':y_test}
+
+		exported_pipeline = make_pipeline(
+	    StackingEstimator(estimator=LinearSVC(C=10.0, dual=False, loss="squared_hinge", penalty="l1", tol=0.001)),
+	    StackingEstimator(estimator=DecisionTreeClassifier(criterion="gini", max_depth=1, min_samples_leaf=11, min_samples_split=6)),
+	    RandomForestClassifier(bootstrap=True, criterion="gini", max_features=0.35000000000000003, min_samples_leaf=1, min_samples_split=8, n_estimators=100)
+		)
+		# Fix random state for all the steps in exported pipeline
+		set_param_recursive(exported_pipeline.steps, 'random_state', 42)
+
+		exported_pipeline.fit(X_train, y_train)
+		plot_confusion_matrix(exported_pipeline,X_test, y_test, display_labels=lang,normalize=None,values_format='d', xticks_rotation='vertical', cmap=plt.cm.Blues)
+		plt.tight_layout()
+		plt.savefig('pipeline2_'+source, dpi=300)
+		model_results['TwitterPipeline2']['Training'] = {'prediction':exported_pipeline.predict(X_test), 'actual':y_test}
+
+
+
+		#kfold_splits = 10
+		#kf = KFold(n_splits=kfold_splits)
+		#for train, test in kf.split(X_train):
+		#	exported_pipeline.fit(X_train[train], y_train[train])
+		#	dummy_clf.fit(X_train[train], y_train[train])
+		#	model_results['TwitterPipeline']['KFold'].append({'prediction':exported_pipeline.predict(X_train[test]), 'actual':y_train[test]})
+		#	model_results['Dummy']['KFold'].append({'prediction':dummy_clf.predict(X_train[test]), 'actual':y_train[test]})
 
 		#print(model_results['GDC'][0],len(model_results['GDC']))
 		#print(model_results['GDC'][0][0])
@@ -344,19 +447,22 @@ def classifyData(file, method, source):
 		#	average = [(average+value[0])/len(model_results[model]) for value in model_results[model]]
 		#	print(sum(average))
 
-		print('Training Accuracy Score: ',accuracy_score(model_results['Training']['actual'],model_results['Training']['prediction']))
-		print('Training f1 macro Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='macro'))
-		print('Training f1 micro Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='micro'))
-		print('Training f1 weighted Score: ',f1_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
-		print('Training Precision Score: ',precision_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
-		print('Training Recall Score: ',recall_score(model_results['Training']['actual'],model_results['Training']['prediction'],average='weighted'))
+		for model in model_results:
+			print('Training Accuracy Score: ',accuracy_score(model_results[model]['Training']['actual'],model_results[model]['Training']['prediction']))
+			print('Training f1 macro Score: ',f1_score(model_results[model]['Training']['actual'],model_results[model]['Training']['prediction'],average='macro'))
+			print('Training f1 micro Score: ',f1_score(model_results[model]['Training']['actual'],model_results[model]['Training']['prediction'],average='micro'))
+			print('Training f1 weighted Score: ',f1_score(model_results[model]['Training']['actual'],model_results[model]['Training']['prediction'],average='weighted'))
+			print('Training Precision Score: ',precision_score(model_results[model]['Training']['actual'],model_results[model]['Training']['prediction'],average='weighted'))
+			print('Training Recall Score: ',recall_score(model_results[model]['Training']['actual'],model_results[model]['Training']['prediction'],average='weighted'))
+			cm = confusion_matrix(model_results[model]['Training']['actual'],model_results[model]['Training']['prediction'])
 
-		print('KFold Average Accuracy Score: '+str(sum([accuracy_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction']) for x in range(0,kfold_splits)])/kfold_splits))
-		print('KFold f1 macro Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='macro') for x in range(0,kfold_splits)])/kfold_splits))
-		print('KFold f1 micro Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='micro') for x in range(0,kfold_splits)])/kfold_splits))
-		print('KFold f1 weighted Score: '+str(sum([f1_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
-		print('KFold Precision Score: '+str(sum([precision_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
-		print('KFold Recall Score: '+str(sum([recall_score(model_results['KFold'][x]['actual'],model_results['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+			#print('KFold Average Accuracy Score: '+str(sum([accuracy_score(model_results[model]['KFold'][x]['actual'],model_results[model]['KFold'][x]['prediction']) for x in range(0,kfold_splits)])/kfold_splits))
+			#print('KFold f1 macro Score: '+str(sum([f1_score(model_results[model]['KFold'][x]['actual'],model_results[model]['KFold'][x]['prediction'],average='macro') for x in range(0,kfold_splits)])/kfold_splits))
+			#print('KFold f1 micro Score: '+str(sum([f1_score(model_results[model]['KFold'][x]['actual'],model_results[model]['KFold'][x]['prediction'],average='micro') for x in range(0,kfold_splits)])/kfold_splits))
+			#print('KFold f1 weighted Score: '+str(sum([f1_score(model_results[model]['KFold'][x]['actual'],model_results[model]['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+			#print('KFold Precision Score: '+str(sum([precision_score(model_results[model]['KFold'][x]['actual'],model_results[model]['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+			#print('KFold Recall Score: '+str(sum([recall_score(model_results[model]['KFold'][x]['actual'],model_results[model]['KFold'][x]['prediction'],average='weighted') for x in range(0,kfold_splits)])/kfold_splits))
+
 		#for entry in model_results['KFold']:
 		#	print(accuracy_score(entry['actual'], entry['prediction']))
 				
