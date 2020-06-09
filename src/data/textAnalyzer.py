@@ -14,12 +14,18 @@ import techniques
 import re
 import glob
 import stanza
+import nltk
 from tokenizer import tokenizer
 
 
 from collections import Counter
 from nltk.util import ngrams
 from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+from nltk.stem import LancasterStemmer
+from nltk.tokenize import word_tokenize 
+
 
 
 #	=================================================================
@@ -111,10 +117,22 @@ def extractFeatures(text, lang=['en','en-US']):
 	text = techniques.removeHashtags(text)
 	text = techniques.removeAtUser(text)
 	text = techniques.replaceURL(text, '')
+
+	porter = PorterStemmer()
+
+	stop_words = set(stopwords.words('english'))
+	word_tokens = word_tokenize(text) 
+	filtered_words = [] 
+	  
+	for w in word_tokens: 
+	    if w not in stop_words: 
+	        filtered_words.append(porter.stem(w))
+
+	
 	
 	countElongated = techniques.countElongated(text)
-	sentenceWords = techniques.words(text)
-	filteredSentence = ' '.join(sentenceWords)
+	#sentenceWords = techniques.words(text)
+	filtered_Sentence = ' '.join(filtered_words)
 	originalText = text
 
 	countCaps = techniques.countAllCaps(text)
@@ -124,7 +142,7 @@ def extractFeatures(text, lang=['en','en-US']):
 	lang_tool = language_check.LanguageTool(lang[1])
 
 	aspellDelta = []
-	for word in sentenceWords:
+	for word in filtered_words:
 		suggest = s.suggest(word)
 		if(len(suggest) > 0):
 			suggest = suggest[0]
@@ -136,10 +154,10 @@ def extractFeatures(text, lang=['en','en-US']):
 	
 	
 	langCheckDelta = []
-	correctedSentence = techniques.words(language_check.correct(filteredSentence, lang_tool.check(filteredSentence)))
+	correctedSentence = techniques.words(language_check.correct(filtered_Sentence, lang_tool.check(filtered_Sentence)))
 	word = 0
-	while word < min(len(correctedSentence), len(sentenceWords)):
-		langCheckDelta.append(ls.distance(correctedSentence[word], sentenceWords[word]))
+	while word < min(len(correctedSentence), len(filtered_words)):
+		langCheckDelta.append(ls.distance(correctedSentence[word], filtered_words[word]))
 		word += 1
 
 	aspellDelta = sum(aspellDelta) / max(1,len(aspellDelta))
@@ -147,8 +165,8 @@ def extractFeatures(text, lang=['en','en-US']):
 	sentenceSpellDelta = (aspellDelta + langCheckDelta) / 2.0
 
 	sentence = ' '.join(correctedSentence)
-	sentenceLength = len(originalText)
-	sentenceWordLength = sum(map(len, [x for x in originalText])) / max(1,sentenceLength)
+	sentenceLength = len(filtered_words)
+	sentenceWordLength = sum([len(x) for x in filtered_words]) / max(1,sentenceLength)
 
 
 	tokenizer = RegexpTokenizer("[a-zA-Z]+")
@@ -159,7 +177,7 @@ def extractFeatures(text, lang=['en','en-US']):
 	sentenceWordBigrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 2)]
 	sentenceWordUnigrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 1)]
 
-	return {'correctedSentence': sentence, 'originalSentence': originalText, 'elongated' : countElongated, 'caps': countCaps, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charTrigrams':sentenceCharTrigrams, 'wordBigrams': sentenceWordBigrams, 'wordUnigrams':sentenceWordUnigrams, 'url': urls, 'hashtag': hashtags, 'atUser': atUsers}
+	return {'correctedSentence': sentence, 'originalSentence': originalText,'filteredSentence':filtered_Sentence, 'elongated' : countElongated, 'caps': countCaps, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charTrigrams':sentenceCharTrigrams, 'wordBigrams': sentenceWordBigrams, 'wordUnigrams':sentenceWordUnigrams, 'url': urls, 'hashtag': hashtags, 'atUser': atUsers}
 
 
 #	=================================================================
@@ -191,9 +209,12 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 		textImported = textImported[textImported.user.str.contains('user') == False].reset_index()
 	else:
 		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=0, encoding="utf-8-sig")
-		textImported.columns = ['text','lang']
+		textImported.columns = ['text','url','lang']
 		textImported = textImported[textImported.text.str.contains('text') == False].reset_index()
 	num_row = 0	
+
+	nltk.download('stopwords')
+	nltk.download('punkt')
 	
 	while num_row < len(textImported):
 		if(filetype == 'reddit'): 
@@ -201,6 +222,7 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 			textUser = textImported.at[num_row, 'user']
 			lang = textImported.at[num_row, 'lang']
 			family = textImported.at[num_row, 'family']
+			category = 'reddit'
 		else:
 			textPost = textImported.at[num_row, 'text']
 			textUser = " "
@@ -232,7 +254,7 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 
 		text = formatText(textPost)
 
-		textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user': textUser}])
+		textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user': textUser, 'category':category}])
 		num_row += 1
 		if((num_row % 100) == 0):
 			print(str(num_row)+' / '+str(len(textImported)))
@@ -244,7 +266,7 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 		nlp = stanza.Pipeline('en', processors='tokenize,pos')
 		R = tokenizer.RedditTokenizer()
 		for text in textFiltered:
-			tokens = R.tokenize(text[0]['originalSentence'])
+			tokens = R.tokenize(text[0]['filteredSentence'])
 			current = []
 			for word in tokens:
 				doc = nlp(word)
@@ -292,7 +314,7 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 				print(str(num_row)+' / '+str(len(textFiltered)))
 
 	else:
-		text_POS = runPOSTagger(text[0]['originalSentence'] for text in textFiltered)
+		text_POS = runPOSTagger(text[0]['filteredSentence'] for text in textFiltered)
 
 
 	
@@ -349,7 +371,7 @@ if __name__ == "__main__":
 	filetype = sys.argv[2]
 	family = 'none'
 	lang = 'none'
-	limit = 'none'
+	limit = 60000
 	if(len(sys.argv) > 3):
 		family = sys.argv[3]
 	if(len(sys.argv) > 4):
@@ -361,18 +383,18 @@ if __name__ == "__main__":
 
 	outputValues = []
 	if(filetype == 'reddit'):
-		print('Running '+ path + ', '+family+', '+lang+', '+limit)
+		print('Running '+ path + ', '+family+', '+lang+', '+str(limit))
 		outputValues.append(analyzeText(path, filetype, family, lang, category, limit))
 	else:
 		files = glob.glob(path+'*.csv')
 		for file in files:
-			print('Running '+ file + ', '+family+', '+lang+', '+limit)
+			print('Running '+ file + ', '+family+', '+lang+', '+str(limit))
 			outputValues.append(analyzeText(file, filetype, family, lang, category, limit))
 
 
-	fields = [ 'correctedSentence','originalSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user']
+	fields = [ 'correctedSentence','originalSentence','filteredSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user', 'category']
 	if(filetype == 'reddit'):
-		filename = 'output/result_'+path.split('_')[1]
+		filename = 'output/result_reddit_'+path.split('_')[1]+'.csv'
 	else:
 		filename = 'output/result_'+lang+'_'+category+'.csv'
 	os.makedirs(os.path.dirname(filename), exist_ok=True)

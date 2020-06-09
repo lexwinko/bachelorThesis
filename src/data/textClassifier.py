@@ -23,6 +23,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.decomposition import IncrementalPCA
 
 import matplotlib.pyplot as plt
 

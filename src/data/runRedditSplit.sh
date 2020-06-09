@@ -14,16 +14,16 @@ head -100000 /media/sf_Shared/reddit_filtered/native/reddit.UK.tok.clean.csv | s
 head -100000 /media/sf_Shared/reddit_filtered/native/reddit.UK.tok.cleanNE.csv | split -dl 2000 --additional-suffix=.csv - ukNE_
 head -100000 /media/sf_Shared/reddit_filtered/native/reddit.US.tok.clean.csv | split -dl 2000 --additional-suffix=.csv - us_
 head -100000 /media/sf_Shared/reddit_filtered/native/reddit.US.tok.cleanNE.csv | split -dl 2000 --additional-suffix=.csv - usNE_
-python3 ../../../tools/filterCSV.py australia_00.csv tag Romance Native
-python3 ../../../tools/filterCSV.py australiaNE_00.csv tag Romance Native
-python3 ../../../tools/filterCSV.py ireland_00.csv tag Romance Native
-python3 ../../../tools/filterCSV.py irelandNE_00.csv tag Romance Native
-python3 ../../../tools/filterCSV.py newzealand_00.csv tag Romance Native
-python3 ../../../tools/filterCSV.py newzealandNE_00.csv tag Romance Native
-python3 ../../../tools/filterCSV.py uk_00.csv tag Romance Native
-python3 ../../../tools/filterCSV.py ukNE_00.csv tag Romance Native
-python3 ../../../tools/filterCSV.py us_00.csv tag Romance Native
-python3 ../../../tools/filterCSV.py usNE_00.csv tag Romance Native
+python3 ../../../tools/filterCSV.py australia_00.csv tag Germanic Native
+python3 ../../../tools/filterCSV.py australiaNE_00.csv tag Germanic Native
+python3 ../../../tools/filterCSV.py ireland_00.csv tag Germanic Native
+python3 ../../../tools/filterCSV.py irelandNE_00.csv tag Germanic Native
+python3 ../../../tools/filterCSV.py newzealand_00.csv tag Germanic Native
+python3 ../../../tools/filterCSV.py newzealandNE_00.csv tag Germanic Native
+python3 ../../../tools/filterCSV.py uk_00.csv tag Germanic Native
+python3 ../../../tools/filterCSV.py ukNE_00.csv tag Germanic Native
+python3 ../../../tools/filterCSV.py us_00.csv tag Germanic Native
+python3 ../../../tools/filterCSV.py usNE_00.csv tag Germanic Native
 find . -type f ! -name "*tagged*" -exec rm -rf {} \;
 cat tagged_australia.csv tagged_ireland.csv tagged_newzealand.csv tagged_uk.csv tagged_us.csv > native.csv
 cat tagged_australiaNE.csv tagged_irelandNE.csv tagged_newzealandNE.csv tagged_ukNE.csv tagged_usNE.csv > nativeNE.csv
