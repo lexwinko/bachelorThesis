@@ -205,7 +205,7 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 	textFiltered = []
 	if(filetype == 'reddit'):
 		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=0, encoding="utf-8-sig")
-		textImported.columns = ['user','subreddit','post','family','lang']
+		textImported.columns = ['user','subreddit','post','langFam','lang', 'category']
 		textImported = textImported[textImported.user.str.contains('user') == False].reset_index()
 	else:
 		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=0, encoding="utf-8-sig")
@@ -221,8 +221,8 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 			textPost = textImported.at[num_row, 'post']
 			textUser = textImported.at[num_row, 'user']
 			lang = textImported.at[num_row, 'lang']
-			family = textImported.at[num_row, 'family']
-			category = 'reddit'
+			family = textImported.at[num_row, 'langFam']
+			category = textImported.at[num_row, 'category']
 		else:
 			textPost = textImported.at[num_row, 'text']
 			textUser = " "

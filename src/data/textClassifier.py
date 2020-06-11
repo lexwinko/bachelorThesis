@@ -37,7 +37,7 @@ from sklearn.metrics import plot_confusion_matrix
 
 def classifyData(file, method, source):
 	data = pd.read_csv(file, header=None, sep=',', skiprows=1)
-	data.columns = ['correctedSentence', 'originalSentence', 'elongated','caps','sentenceLength','sentenceWordLength','spellDelta', 'charTrigrams','wordBigrams','wordUnigrams', 'hashtag', 'url', 'atUser','#','@','E',',','~','U','A','D','!','N','P','O','R','&','L','Z','^','V','$','G','T','X','S','Y','M','langFam', 'lang', 'user',
+	data.columns = ['correctedSentence', 'originalSentence', 'filteredSentence', 'elongated','caps','sentenceLength','sentenceWordLength','spellDelta', 'charTrigrams','wordBigrams','wordUnigrams', 'hashtag', 'url', 'atUser','#','@','E',',','~','U','A','D','!','N','P','O','R','&','L','Z','^','V','$','G','T','X','S','Y','M','langFam', 'lang', 'user', 'category',
 					'charTrigrams_similarity_French',
 					'wordBigrams_similarity_French',
 					'wordUnigrams_similarity_French',
@@ -112,21 +112,66 @@ def classifyData(file, method, source):
 					'wordUnigrams_similarity_Hungarian',
 					'charTrigrams_similarity_English',
 					'wordBigrams_similarity_English',
-					'wordUnigrams_similarity_English']
+					'wordUnigrams_similarity_English',
+					'charTrigrams_similarity_Balto-Slavic',
+					'wordBigrams_similarity_Balto-Slavic',
+					'wordUnigrams_similarity_Balto-Slavic',
+					'charTrigrams_similarity_Germanic',
+					'wordBigrams_similarity_Germanic',
+					'wordUnigrams_similarity_Germanic',
+					'charTrigrams_similarity_Romance',
+					'wordBigrams_similarity_Romance',
+					'wordUnigrams_similarity_Romance',
+					'charTrigrams_similarity_Japonic',
+					'wordBigrams_similarity_Japonic',
+					'wordUnigrams_similarity_Japonic',
+					'charTrigrams_similarity_Turkic',
+					'wordBigrams_similarity_Turkic',
+					'wordUnigrams_similarity_Turkic',
+					'charTrigrams_similarity_Uralic',
+					'wordBigrams_similarity_Uralic',
+					'wordUnigrams_similarity_Uralic',
+					'charTrigrams_similarity_Indo-Aryan',
+					'wordBigrams_similarity_Indo-Aryan',
+					'wordUnigrams_similarity_Indo-Aryan',
+					'charTrigrams_similarity_European',
+					'wordBigrams_similarity_European',
+					'wordUnigrams_similarity_European',
+					'charTrigrams_similarity_NonEuropean',
+					'wordBigrams_similarity_NonEuropean',
+					'wordUnigrams_similarity_NonEuropean',
+					'charTrigrams_similarity_ArtCul',
+					'wordBigrams_similarity_ArtCul',
+					'wordUnigrams_similarity_ArtCul',
+					'charTrigrams_similarity_BuiTecSci',
+					'wordBigrams_similarity_BuiTecSci',
+					'wordUnigrams_similarity_BuiTecSci',
+					'charTrigrams_similarity_Pol',
+					'wordBigrams_similarity_Pol',
+					'wordUnigrams_similarity_Pol',
+					'charTrigrams_similarity_SocSoc',
+					'wordBigrams_similarity_SocSoc',
+					'wordUnigrams_similarity_SocSoc'
+					]
+
+
 	data = data[data.correctedSentence.str.contains('correctedSentence') == False]
 	data.sample(random_state=42)
-	classes = pd.get_dummies(pd.Series(list(data['lang'])))
+	classes_family = pd.get_dummies(pd.Series(list(data['langFam'])))
+	classes_category = pd.get_dummies(pd.Series(list(data['category'])))
+	classes_lang = pd.get_dummies(pd.Series(list(data['lang'])))
 	
-	sentence = ['correctedSentence', 'originalSentence']
+	sentence = ['correctedSentence', 'originalSentence', 'filteredSentence']
 
-	if(source == 'reddit'):
-		lang = [
+	lang = [
 			'French', 
 			'German', 
 			'Greek', 
 			'English',  
 			'Russian', 
-			'Turkish', 
+			'Turkish',
+			'Japanese',
+			'Indian',
 			'Bulgarian',
 			'Croatian',
 			'Czech',
@@ -145,17 +190,37 @@ def classifyData(file, method, source):
 			'Estonian',
 			'Hungarian'
 			]
+	family = [
+			'Balto-Slavic',
+			'Germanic',
+			'Indo-Aryan',
+			'Japonic',
+			'Romance',
+			'Turkic',
+			'Uralic',
+			'Greek'
+	]
+	category = [
+			'ArtCul',
+			'BuiTecSci',
+			'European',
+			'NonEuropean',
+			'Pol',
+			'SocSoc'
+	]
+
+	if(source == 'reddit'):
 		features = [	'elongated',
 						'caps',
 						'sentenceLength',
 						'sentenceWordLength',
 						'spellDelta',
 						'#',
-						#'@',
-						#'E',
+						'@',
+						'E',
 						',',
-						#'~',
-						#'U',
+						'~',
+						'U',
 						'A',
 						'D',
 						'!',
@@ -164,17 +229,17 @@ def classifyData(file, method, source):
 						'O',
 						'R',
 						'&',
-						#'L',
-						#'Z',
+						'L',
+						'Z',
 						'^',
 						'V',
 						'$',
 						'G',
 						'T',
-						#'X',
-						#'S',
-						#'Y',
-						#'M',
+						'X',
+						'S',
+						'Y',
+						'M',
 						'charTrigrams_similarity_French',
 						'wordBigrams_similarity_French',
 						'wordUnigrams_similarity_French',
@@ -243,18 +308,29 @@ def classifyData(file, method, source):
 						'wordUnigrams_similarity_Hungarian',
 						'charTrigrams_similarity_English',
 						'wordBigrams_similarity_English',
-						'wordUnigrams_similarity_English']
-	else:
-		lang = [
-			'French', 
-			'German', 
-			'Greek', 
-			'English', 
-			'Indian', 
-			'Japanese', 
-			'Russian', 
-			'Turkish', 
-			]
+						'wordUnigrams_similarity_English',
+						'charTrigrams_similarity_Balto-Slavic',
+						'wordBigrams_similarity_Balto-Slavic',
+						'wordUnigrams_similarity_Balto-Slavic',
+						'charTrigrams_similarity_Germanic',
+						'wordBigrams_similarity_Germanic',
+						'wordUnigrams_similarity_Germanic',
+						'charTrigrams_similarity_Romance',
+						'wordBigrams_similarity_Romance',
+						'wordUnigrams_similarity_Romance',
+						'charTrigrams_similarity_Turkic',
+						'wordBigrams_similarity_Turkic',
+						'wordUnigrams_similarity_Turkic',
+						'charTrigrams_similarity_Uralic',
+						'wordBigrams_similarity_Uralic',
+						'wordUnigrams_similarity_Uralic',
+						'charTrigrams_similarity_European',
+						'wordBigrams_similarity_European',
+						'wordUnigrams_similarity_European',
+						'charTrigrams_similarity_NonEuropean',
+						'wordBigrams_similarity_NonEuropean',
+						'wordUnigrams_similarity_NonEuropean']
+	elif(source == 'twitter'):
 		features = [	'elongated',
 						'caps',
 						'sentenceLength',
@@ -308,16 +384,204 @@ def classifyData(file, method, source):
 						'wordUnigrams_similarity_Turkish',
 						'charTrigrams_similarity_English',
 						'wordBigrams_similarity_English',
-						'wordUnigrams_similarity_English']
+						'wordUnigrams_similarity_English',
+						'charTrigrams_similarity_Balto-Slavic',
+						'wordBigrams_similarity_Balto-Slavic',
+						'wordUnigrams_similarity_Balto-Slavic',
+						'charTrigrams_similarity_Germanic',
+						'wordBigrams_similarity_Germanic',
+						'wordUnigrams_similarity_Germanic',
+						'charTrigrams_similarity_Romance',
+						'wordBigrams_similarity_Romance',
+						'wordUnigrams_similarity_Romance',
+						'charTrigrams_similarity_Turkic',
+						'wordBigrams_similarity_Turkic',
+						'wordUnigrams_similarity_Turkic',
+						'charTrigrams_similarity_Indo-Aryan',
+						'wordBigrams_similarity_Indo-Aryan',
+						'wordUnigrams_similarity_Indo-Aryan',
+						'charTrigrams_similarity_Japonic',
+						'wordBigrams_similarity_Japonic',
+						'wordUnigrams_similarity_Japonic',
+						'charTrigrams_similarity_ArtCul',
+						'wordBigrams_similarity_ArtCul',
+						'wordUnigrams_similarity_ArtCul',
+						'charTrigrams_similarity_BuiTecSci',
+						'wordBigrams_similarity_BuiTecSci',
+						'wordUnigrams_similarity_BuiTecSci',
+						'charTrigrams_similarity_SocSoc',
+						'wordBigrams_similarity_SocSoc',
+						'wordUnigrams_similarity_SocSoc',
+						'charTrigrams_similarity_Pol',
+						'wordBigrams_similarity_Pol',
+						'wordUnigrams_similarity_Pol']
+	else:
+		features = [	'elongated',
+						'caps',
+						'sentenceLength',
+						'sentenceWordLength',
+						'spellDelta',
+						'#',
+						'@',
+						'E',
+						',',
+						'~',
+						'U',
+						'A',
+						'D',
+						'!',
+						'N',
+						'P',
+						'O',
+						'R',
+						'&',
+						'L',
+						'Z',
+						'^',
+						'V',
+						'$',
+						'G',
+						'T',
+						'X',
+						'S',
+						'Y',
+						'M',
+						'charTrigrams_similarity_French',
+						'wordBigrams_similarity_French',
+						'wordUnigrams_similarity_French',
+						'charTrigrams_similarity_German',
+						'wordBigrams_similarity_German',
+						'wordUnigrams_similarity_German',
+						'charTrigrams_similarity_Greek',
+						'wordBigrams_similarity_Greek',
+						'wordUnigrams_similarity_Greek',
+						'charTrigrams_similarity_Indian',
+						'wordBigrams_similarity_Indian',
+						'wordUnigrams_similarity_Indian',
+						'charTrigrams_similarity_Russian',
+						'wordBigrams_similarity_Russian',
+						'wordUnigrams_similarity_Russian',
+						'charTrigrams_similarity_Japanese',
+						'wordBigrams_similarity_Japanese',
+						'wordUnigrams_similarity_Japanese',
+						'charTrigrams_similarity_Turkish',
+						'wordBigrams_similarity_Turkish',
+						'wordUnigrams_similarity_Turkish',
+						'charTrigrams_similarity_Bulgarian',
+						'wordBigrams_similarity_Bulgarian',
+						'wordUnigrams_similarity_Bulgarian',
+						'charTrigrams_similarity_Croatian',
+						'wordBigrams_similarity_Croatian',
+						'wordUnigrams_similarity_Croatian',
+						'charTrigrams_similarity_Czech',
+						'wordBigrams_similarity_Czech',
+						'wordUnigrams_similarity_Czech',
+						'charTrigrams_similarity_Lithuanian',
+						'wordBigrams_similarity_Lithuanian',
+						'wordUnigrams_similarity_Lithuanian',
+						'charTrigrams_similarity_Polish',
+						'wordBigrams_similarity_Polish',
+						'wordUnigrams_similarity_Polish',
+						'charTrigrams_similarity_Serbian',
+						'wordBigrams_similarity_Serbian',
+						'wordUnigrams_similarity_Serbian',
+						'charTrigrams_similarity_Slovene',
+						'wordBigrams_similarity_Slovene',
+						'wordUnigrams_similarity_Slovene',
+						'charTrigrams_similarity_Finnish',
+						'wordBigrams_similarity_Finnish',
+						'wordUnigrams_similarity_Finnish',
+						'charTrigrams_similarity_Dutch',
+						'wordBigrams_similarity_Dutch',
+						'wordUnigrams_similarity_Dutch',
+						'charTrigrams_similarity_Norwegian',
+						'wordBigrams_similarity_Norwegian',
+						'wordUnigrams_similarity_Norwegian',
+						'charTrigrams_similarity_Swedish',
+						'wordBigrams_similarity_Swedish',
+						'wordUnigrams_similarity_Swedish',
+						'charTrigrams_similarity_Italian',
+						'wordBigrams_similarity_Italian',
+						'wordUnigrams_similarity_Italian',
+						'charTrigrams_similarity_Spanish',
+						'wordBigrams_similarity_Spanish',
+						'wordUnigrams_similarity_Spanish',
+						'charTrigrams_similarity_Portugese',
+						'wordBigrams_similarity_Portugese',
+						'wordUnigrams_similarity_Portugese',
+						'charTrigrams_similarity_Romanian',
+						'wordBigrams_similarity_Romanian',
+						'wordUnigrams_similarity_Romanian',
+						'charTrigrams_similarity_Estonian',
+						'wordBigrams_similarity_Estonian',
+						'wordUnigrams_similarity_Estonian',
+						'charTrigrams_similarity_Hungarian',
+						'wordBigrams_similarity_Hungarian',
+						'wordUnigrams_similarity_Hungarian',
+						'charTrigrams_similarity_English',
+						'wordBigrams_similarity_English',
+						'wordUnigrams_similarity_English',
+						'charTrigrams_similarity_Balto-Slavic',
+						'wordBigrams_similarity_Balto-Slavic',
+						'wordUnigrams_similarity_Balto-Slavic',
+						'charTrigrams_similarity_Germanic',
+						'wordBigrams_similarity_Germanic',
+						'wordUnigrams_similarity_Germanic',
+						'charTrigrams_similarity_Romance',
+						'wordBigrams_similarity_Romance',
+						'wordUnigrams_similarity_Romance',
+						'charTrigrams_similarity_Turkic',
+						'wordBigrams_similarity_Turkic',
+						'wordUnigrams_similarity_Turkic',
+						'charTrigrams_similarity_Uralic',
+						'wordBigrams_similarity_Uralic',
+						'wordUnigrams_similarity_Uralic',
+						'charTrigrams_similarity_Indo-Aryan',
+						'wordBigrams_similarity_Indo-Aryan',
+						'wordUnigrams_similarity_Indo-Aryan',
+						'charTrigrams_similarity_Japonic',
+						'wordBigrams_similarity_Japonic',
+						'wordUnigrams_similarity_Japonic',
+						'charTrigrams_similarity_ArtCul',
+						'wordBigrams_similarity_ArtCul',
+						'wordUnigrams_similarity_ArtCul',
+						'charTrigrams_similarity_BuiTecSci',
+						'wordBigrams_similarity_BuiTecSci',
+						'wordUnigrams_similarity_BuiTecSci',
+						'charTrigrams_similarity_SocSoc',
+						'wordBigrams_similarity_SocSoc',
+						'wordUnigrams_similarity_SocSoc',
+						'charTrigrams_similarity_Pol',
+						'wordBigrams_similarity_Pol',
+						'wordUnigrams_similarity_Pol',
+						'charTrigrams_similarity_European',
+						'wordBigrams_similarity_European',
+						'wordUnigrams_similarity_European',
+						'charTrigrams_similarity_NonEuropean',
+						'wordBigrams_similarity_NonEuropean',
+						'wordUnigrams_similarity_NonEuropean']
 
-	le = preprocessing.LabelEncoder()
-	le.fit(lang)
-	print(le.classes_)
+
+						
+
+	le_family = preprocessing.LabelEncoder()
+	le_family.fit(family)
+	print(le_family.classes_)
+	labeldata_family = le_family.transform(data['langFam'])
+
+	le_category = preprocessing.LabelEncoder()
+	le_category.fit(category)
+	print(le_category.classes_)
+	labeldata_category = le_category.transform(data['category'])
+
+	le_lang = preprocessing.LabelEncoder()
+	le_lang.fit(lang)
+	print(le_lang.classes_)
+	labeldata_lang = le_lang.transform(data['lang'])
 
 	featuredata = data[features].to_numpy(dtype='float64')
-	labeldata = le.transform(data['lang'])
 
-	X_train, X_test, y_train, y_test = train_test_split(featuredata, labeldata, test_size=0.3)
+	X_train, X_test, y_train, y_test = train_test_split(featuredata, labeldata_family, test_size=0.3)
 	
 
 	model_results = {	'Dummy':{'Training':[], 'KFold':[]},
@@ -328,7 +592,7 @@ def classifyData(file, method, source):
 					 	'TwitterPipeline2':{'Training':[], 'KFold':[]}}
 
 	if(method == 'tpot'):
-		tpot = TPOTClassifier(generations=5, population_size=20, verbosity=2, cv=10, random_state=42)
+		tpot = TPOTClassifier(generations=3, population_size=20, verbosity=2, cv=10, random_state=42)
 		tpot.fit(X_train, y_train)
 		print(tpot.score(X_test, y_test))
 		tpot.export('tpot_model.py')
