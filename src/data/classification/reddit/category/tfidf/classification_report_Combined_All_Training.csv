@@ -1,0 +1,2 @@
+source,accuracy,f1_macro,f1_micro,precision,recall
+tfidf,0.625,0.6241800907847113,0.625,0.6283300133441112,0.625

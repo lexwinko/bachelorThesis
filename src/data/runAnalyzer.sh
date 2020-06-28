@@ -48,8 +48,8 @@ rm output/result_*
 cat output/combined_Pol.csv output/combined_SocSoc.csv output/combined_ArtCul.csv output/combined_BuiTecSci.csv > output/full_data_twitter.csv
 
 python3 ../tools/filterCSV.py output/full_data_twitter.csv ngram 1000 twitter
-rm ../../data/processed/ngrams/ngrams_twitter_*
-mv output/ngrams* ../../data/processed/ngrams
+rm ../../data/processed/ngrams/twitter/ngrams_twitter_*
+mv output/ngrams* ../../data/processed/ngrams/twitter/
 
 #python3 ../tools/filterCSV.py output/full_data_twitter.csv classifier
 

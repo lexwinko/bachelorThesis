@@ -126,7 +126,7 @@ def extractFeatures(text, lang=['en','en-US']):
 	  
 	for w in word_tokens: 
 	    if w not in stop_words: 
-	        filtered_words.append(porter.stem(w))
+	        filtered_words.append(w)
 
 	
 	
@@ -168,16 +168,20 @@ def extractFeatures(text, lang=['en','en-US']):
 	sentenceLength = len(filtered_words)
 	sentenceWordLength = sum([len(x) for x in filtered_words]) / max(1,sentenceLength)
 
+	stemmed_words = []
+	for word in filtered_words:
+		stemmed_words.append(porter.stem(word))
+	stemmed_sentence = ' '.join(stemmed_words)
 
 	tokenizer = RegexpTokenizer("[a-zA-Z]+")
-	tokenizedText = tokenizer.tokenize(originalText)
+	tokenizedText = tokenizer.tokenize(stemmed_sentence)
 	tokenizedChar = [c for c in ' '.join(tokenizedText)]
 
 	sentenceCharTrigrams = [ ''.join(grams) for grams in ngrams(tokenizedChar, 3)]
 	sentenceWordBigrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 2)]
 	sentenceWordUnigrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 1)]
 
-	return {'correctedSentence': sentence, 'originalSentence': originalText,'filteredSentence':filtered_Sentence, 'elongated' : countElongated, 'caps': countCaps, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charTrigrams':sentenceCharTrigrams, 'wordBigrams': sentenceWordBigrams, 'wordUnigrams':sentenceWordUnigrams, 'url': urls, 'hashtag': hashtags, 'atUser': atUsers}
+	return {'correctedSentence': sentence, 'originalSentence': originalText,'filteredSentence':filtered_Sentence, 'stemmedSentence':stemmed_sentence, 'elongated' : countElongated, 'caps': countCaps, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charTrigrams':sentenceCharTrigrams, 'wordBigrams': sentenceWordBigrams, 'wordUnigrams':sentenceWordUnigrams, 'url': urls, 'hashtag': hashtags, 'atUser': atUsers}
 
 
 #	=================================================================
@@ -266,7 +270,7 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 		nlp = stanza.Pipeline('en', processors='tokenize,pos')
 		R = tokenizer.RedditTokenizer()
 		for text in textFiltered:
-			tokens = R.tokenize(text[0]['filteredSentence'])
+			tokens = R.tokenize(text[0]['stemmedSentence'])
 			current = []
 			for word in tokens:
 				doc = nlp(word)
@@ -314,7 +318,7 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 				print(str(num_row)+' / '+str(len(textFiltered)))
 
 	else:
-		text_POS = runPOSTagger(text[0]['filteredSentence'] for text in textFiltered)
+		text_POS = runPOSTagger(text[0]['stemmedSentence'] for text in textFiltered)
 
 
 	
@@ -392,7 +396,7 @@ if __name__ == "__main__":
 			outputValues.append(analyzeText(file, filetype, family, lang, category, limit))
 
 
-	fields = [ 'correctedSentence','originalSentence','filteredSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user', 'category']
+	fields = [ 'correctedSentence','originalSentence','filteredSentence','stemmedSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user', 'category']
 	if(filetype == 'reddit'):
 		filename = 'output/result_reddit_'+path.split('_')[1]+'.csv'
 	else:
