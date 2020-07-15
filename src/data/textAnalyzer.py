@@ -23,7 +23,6 @@ from nltk.util import ngrams
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
-from nltk.stem import LancasterStemmer
 from nltk.tokenize import word_tokenize 
 
 
@@ -123,11 +122,13 @@ def extractFeatures(text, lang=['en','en-US']):
 	stop_words = set(stopwords.words('english'))
 	word_tokens = word_tokenize(text) 
 	filtered_words = [] 
+	functionWords = []
 	  
 	for w in word_tokens: 
 	    if w not in stop_words: 
 	        filtered_words.append(w)
-
+	    else:
+	    	functionWords.append(w)
 	
 	
 	countElongated = techniques.countElongated(text)
@@ -180,8 +181,9 @@ def extractFeatures(text, lang=['en','en-US']):
 	sentenceCharTrigrams = [ ''.join(grams) for grams in ngrams(tokenizedChar, 3)]
 	sentenceWordBigrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 2)]
 	sentenceWordUnigrams = [ ' '.join(grams) for grams in ngrams(tokenizedText, 1)]
+	functionWords = [ ' '.join(grams) for grams in ngrams(functionWords, 1)]
 
-	return {'correctedSentence': sentence, 'originalSentence': originalText,'filteredSentence':filtered_Sentence, 'stemmedSentence':stemmed_sentence, 'elongated' : countElongated, 'caps': countCaps, 'sentenceLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charTrigrams':sentenceCharTrigrams, 'wordBigrams': sentenceWordBigrams, 'wordUnigrams':sentenceWordUnigrams, 'url': urls, 'hashtag': hashtags, 'atUser': atUsers}
+	return {'correctedSentence': sentence, 'originalSentence': originalText,'filteredSentence':filtered_Sentence, 'stemmedSentence':stemmed_sentence, 'elongated' : countElongated, 'caps': countCaps, 'textLength': sentenceLength, 'sentenceWordLength' : sentenceWordLength, 'spellDelta':sentenceSpellDelta, 'charTrigrams':sentenceCharTrigrams, 'wordBigrams': sentenceWordBigrams, 'wordUnigrams':sentenceWordUnigrams, 'POSBigrams': '', 'functionWords': functionWords, 'hashtag': hashtags, 'url':urls}
 
 
 #	=================================================================
@@ -205,60 +207,28 @@ def extractFeatures(text, lang=['en','en-US']):
 #						+word 2-grams
 #	=================================================================	
 
-def analyzeText(file, filetype, family='none', lang='none', category='none', limit=0):
+def analyzeText(file, filetype):
 	textFiltered = []
-	if(filetype == 'reddit'):
-		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=0, encoding="utf-8-sig")
-		textImported.columns = ['user','subreddit','post','langFam','lang', 'category']
-		textImported = textImported[textImported.user.str.contains('user') == False].reset_index()
-	else:
-		textImported = pd.read_csv(file, header=None, nrows=int(limit), sep=',', skiprows=0, encoding="utf-8-sig")
-		textImported.columns = ['text','url','lang']
-		textImported = textImported[textImported.text.str.contains('text') == False].reset_index()
+	textImported = pd.read_csv(file, header=None, sep=',', skiprows=0, encoding="utf-8-sig")
+	textImported.columns = ['text', 'lang', 'langFam', 'category', 'origin']
+	textImported = textImported[textImported.langFam.str.contains('langFam') == False].reset_index()
+
 	num_row = 0	
 
 	nltk.download('stopwords')
 	nltk.download('punkt')
 	
 	while num_row < len(textImported):
-		if(filetype == 'reddit'): 
-			textPost = textImported.at[num_row, 'post']
-			textUser = textImported.at[num_row, 'user']
-			lang = textImported.at[num_row, 'lang']
-			family = textImported.at[num_row, 'langFam']
-			category = textImported.at[num_row, 'category']
-		else:
-			textPost = textImported.at[num_row, 'text']
-			textUser = " "
-			if(textImported.at[num_row, 'lang'] == 'indian'):
-				lang = 'Indian'
-				family = 'Indo-Aryan'
-			elif(textImported.at[num_row, 'lang'] == 'german'):
-				lang = 'German'
-				family = 'Germanic'
-			elif(textImported.at[num_row, 'lang'] == 'french'):
-				lang = 'French'
-				family = 'Romance'
-			elif(textImported.at[num_row, 'lang'] == 'russian'):
-				lang = 'Russian'
-				family = 'Balto-Slavic'
-			elif(textImported.at[num_row, 'lang'] == 'turkish'):
-				lang = 'Turkish'
-				family = 'Turkic'
-			elif(textImported.at[num_row, 'lang'] == 'greek'):
-				lang = 'Greek'
-				family = 'Greek'
-			elif(textImported.at[num_row, 'lang'] == 'japanese'):
-				lang = 'Japanese'
-				family = 'Japonic'
-			else:
-				lang = 'English'
-				family = 'Germanic'
+		textPost = textImported.at[num_row, 'text']
+		lang = textImported.at[num_row, 'lang']
+		family = textImported.at[num_row, 'langFam']
+		category = filetype
+		origin = textImported.at[num_row, 'origin']
 
 
 		text = formatText(textPost)
 
-		textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'user': textUser, 'category':category}])
+		textFiltered.append([extractFeatures(text), {'langFam': family, 'lang': lang, 'category':category, 'origin':origin}])
 		num_row += 1
 		if((num_row % 100) == 0):
 			print(str(num_row)+' / '+str(len(textImported)))
@@ -353,12 +323,14 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 	num_tweet = 0
 	while num_tweet < len(textFiltered):
 		textFiltered[num_tweet].append({'#':0, '@':0, 'E':0, ',':0, '~':0, 'U':0, 'A':0, 'D':0, '!':0, 'N':0, 'P':0, 'O':0, 'R':0, '&':0, 'L':0, 'Z':0, '^':0, 'V':0, '$':0, 'G':0, 'T':0, 'X':0, 'S':0, 'Y':0, 'M':0 })
+		#print([x[1] for x in text_POS[num_tweet]])
+		textFiltered[num_tweet][0]['POSBigrams'] = [ ' '.join(grams) for grams in ngrams([x[1] for x in text_POS[num_tweet]], 2)]
 		for tag in text_POS[num_tweet]:
 			key = tag[1]
 			if key in textFiltered[num_tweet][2]:
-				textFiltered[num_tweet][2][key] += 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
+				textFiltered[num_tweet][2][key] += 1 / max(1, textFiltered[num_tweet][0]['textLength']) * 100
 			else:
-				textFiltered[num_tweet][2][key] = 1 / max(1, textFiltered[num_tweet][0]['sentenceLength']) * 100
+				textFiltered[num_tweet][2][key] = 1 / max(1, textFiltered[num_tweet][0]['textLength']) * 100
 
 
 		textFiltered[num_tweet][2]['#'] = len(textFiltered[num_tweet][0]['hashtag'])
@@ -373,9 +345,9 @@ def analyzeText(file, filetype, family='none', lang='none', category='none', lim
 if __name__ == "__main__":
 	path = sys.argv[1]
 	filetype = sys.argv[2]
-	family = 'none'
-	lang = 'none'
-	limit = 60000
+	#family = 'none'
+	#lang = 'none'
+	#limit = 60000
 	if(len(sys.argv) > 3):
 		family = sys.argv[3]
 	if(len(sys.argv) > 4):
@@ -386,23 +358,20 @@ if __name__ == "__main__":
 		limit = sys.argv[6]
 
 	outputValues = []
-	if(filetype == 'reddit'):
-		print('Running '+ path + ', '+family+', '+lang+', '+str(limit))
-		outputValues.append(analyzeText(path, filetype, family, lang, category, limit))
-	else:
-		files = glob.glob(path+'*.csv')
-		for file in files:
-			print('Running '+ file + ', '+family+', '+lang+', '+str(limit))
-			outputValues.append(analyzeText(file, filetype, family, lang, category, limit))
+	#if(filetype == 'reddit'):
+	#print('Running '+ path + ', '+family+', '+lang+', '+str(limit))
+	outputValues.append(analyzeText(path, filetype))
+	#else:
+	#	files = glob.glob(path+'*.csv')
+	#	for file in files:
+	#		print('Running '+ file + ', '+family+', '+lang+', '+str(limit))
+	#		outputValues.append(analyzeText(file, filetype, family, lang, category, limit))
 
 
-	fields = [ 'correctedSentence','originalSentence','filteredSentence','stemmedSentence','elongated','caps','sentenceLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','hashtag','url','atUser','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'user', 'category']
-	if(filetype == 'reddit'):
-		filename = 'output/result_reddit_'+path.split('_')[1]+'.csv'
-	else:
-		filename = 'output/result_'+lang+'_'+category+'.csv'
+	fields = [ 'correctedSentence','originalSentence','filteredSentence','stemmedSentence','elongated','caps','textLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','POSBigrams','functionWords','hashtag','url','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'category', 'origin']
+	filename = 'output/result_anaylze.csv'
 	os.makedirs(os.path.dirname(filename), exist_ok=True)
-	with open(filename, "a") as f:
+	with open(filename, "w") as f:
 		w = csv.DictWriter(f, fields)
 		w.writeheader()
 		for results in outputValues:
