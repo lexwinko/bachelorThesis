@@ -36,13 +36,16 @@ from sklearn.feature_extraction.text import CountVectorizer
 # from sklearn.linear_model import PassiveAggressiveClassifier
 # from sklearn.linear_model import Perceptron
 # from sklearn.neighbors import NearestCentroid
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier, ExtraTreesClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline, make_union
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
 from sklearn.tree import DecisionTreeClassifier
 from tpot.builtins import StackingEstimator
+from sklearn.model_selection import cross_validate
+from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LogisticRegression
 from tpot.export_utils import set_param_recursive
 
 from sklearn.feature_selection import SelectFromModel
@@ -1071,10 +1074,10 @@ def classifyData(file, method, source, other):
 
 		#featuredata = np.append(data[features].to_numpy(dtype='float64'),dense, axis=1)
 
-		tpot = TPOTClassifier(generations=3, population_size=50, warm_start=True, verbosity=2, cv=10, n_jobs=-1, random_state=42)
+		tpot = TPOTClassifier(generations=3, population_size=50, verbosity=2, cv=5, n_jobs=-1, random_state=42)
 
 		
-		chunks = createChunks(data,features,100)
+		chunks = createChunks(source,data,features,100)
 
 		le_family = preprocessing.LabelEncoder()
 		le_family.fit(family)
@@ -1112,7 +1115,7 @@ def classifyData(file, method, source, other):
 			if(max(scores) > best_score['score']):
 				best_score['score'] = max(scores)
 				best_score['run'] = runs
-			elif(runs - best_score['run'] > 2):
+			elif(runs - best_score['run'] > 1):
 				break
 
 			
@@ -1262,40 +1265,41 @@ def createChunks(source,dataset,featureset,csize):
 
 	for language in BaltoSlavic.groups:
 		for g, df in BaltoSlavic.get_group(language).groupby(np.arange(len(BaltoSlavic.get_group(language))) // chunksize_bs):
+		#for g, df in BaltoSlavic.get_group(language).groupby(np.arange(len(BaltoSlavic)) // chunksize):
 			chunks['Balto-Slavic'][language].append(df)
 
 	for language in Germanic.groups:
 		for g, df in Germanic.get_group(language).groupby(np.arange(len(Germanic.get_group(language))) // chunksize_gm):
+		#for g, df in Germanic.get_group(language).groupby(np.arange(len(Germanic)) // chunksize):
 			chunks['Germanic'][language].append(df)
 
 	
 
 	for g, df in Native.groupby(np.arange(len(Native)) // chunksize):
 		chunks['Native']['Native'].append(df)
+		#if(g > 15):
+		#	break
 
 	for language in Romance.groups:
 		for g, df in Romance.get_group(language).groupby(np.arange(len(Romance.get_group(language))) // chunksize_ro):
+		#for g, df in Romance.get_group(language).groupby(np.arange(len(Romance)) // chunksize):
 			chunks['Romance'][language].append(df)
 
 	return chunks
 
 def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 	#datasets = [('Reddit',reddit), ('RedditNE',redditNE), ('Twitter',twitter), ('Combined',combined), ('CombinedNE',combinedNE)]
-	datasets = [('Twitter',twitter)]
+	datasets = [('RedditNE',redditNE)]
 	class_scores = {
 		'Normal':{ 
-				'Reddit': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}},
-				'RedditNE': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}},
-				'Twitter': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}},
-				'Combined': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}},
-				'CombinedNE': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}}
+				'Reddit': {'Origin':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}},
+				'RedditNE': {'Origin':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}},
+				'Twitter': {'Origin':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}}
 		},
 		'TFIDF':{ 
-				'Reddit': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}},
-				'RedditNE': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}},
-				'Twitter': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}},
-				'Combined': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}},
-				'CombinedNE': {'Origin':{'RandomForest':[], 'Pipeline':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[]}, 'Language':{'RandomForest':[], 'Pipeline':[]}, 'Category':{'RandomForest':[], 'Pipeline':[]}}
+				'Reddit': {'Origin':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}},
+				'RedditNE': {'Origin':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}},
+				'Twitter': {'Origin':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language_Family':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}, 'Language':{'RandomForest':[], 'Pipeline':[], 'LogisticRegression':[], 'SVM':[]}}
 		}
 	}
 	for dataset in datasets:
@@ -2170,7 +2174,8 @@ def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 
 
 
-		classification_data = [labeldata_origin, labeldata_family, labeldata_lang,  labeldata_category]
+		classification_data = [labeldata_origin, labeldata_family, labeldata_lang]
+		#classification_data = [labeldata_family, labeldata_lang]
 		
 		#labels = [lang, family, category, origin]
 
@@ -2179,28 +2184,37 @@ def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 		else:
 			class_range = 3
 
-		classification_classes = ['Origin', 'Language_Family', 'Language', 'Category' ]
+		classification_classes = ['Origin', 'Language_Family', 'Language']
+		#classification_classes = ['Language_Family', 'Language']
+		
 		for classes in range(0,class_range):
 			print(dataset[0],classification_classes[classes])
 			randomforest = RandomForestClassifier(criterion="gini", n_estimators=100,random_state=42, n_jobs=-1)
 
-			pipeline = make_pipeline(
-		    StandardScaler(),
-		    StackingEstimator(estimator=LinearSVC(C=1.0, dual=False, loss="squared_hinge", penalty="l1", tol=0.0001, max_iter=150000)),
-		    StackingEstimator(estimator=DecisionTreeClassifier(criterion="gini", max_depth=1, min_samples_leaf=11, min_samples_split=6)),
-		    GradientBoostingClassifier(learning_rate=0.1, max_depth=7, max_features=0.25, min_samples_leaf=20, min_samples_split=16, n_estimators=100, subsample=0.5)
-			)
-			set_param_recursive(pipeline.steps, 'random_state', 42)
-			set_param_recursive(pipeline.steps, 'n_jobs', -1)
-			#set_param_recursive(pipeline.steps, 'warm_start', True)
+			svm = make_pipeline(StandardScaler(),LinearSVC(random_state=42, tol=1e-5))
 
-			#print(dataset[0])
+			lr = LogisticRegression(random_state=42, n_jobs=-1)
+
+			if(dataset[0] == 'twitter'):
+				pipeline = make_pipeline(
+				    StackingEstimator(estimator=RandomForestClassifier(bootstrap=False, criterion="entropy", max_features=0.3, min_samples_leaf=7, min_samples_split=6, n_estimators=100)),
+				    StackingEstimator(estimator=ExtraTreesClassifier(bootstrap=False, criterion="entropy", max_features=0.8, min_samples_leaf=18, min_samples_split=5, n_estimators=100)),
+				    GaussianNB()
+				)
+				set_param_recursive(pipeline.steps, 'random_state', 42)
+				set_param_recursive(pipeline.steps, 'n_jobs', -1)
+			else:
+				pipeline = LinearSVC(C=10.0, dual=False, loss="squared_hinge", penalty="l1", tol=0.001)
+				if hasattr(pipeline, 'random_state'):
+				    setattr(pipeline, 'random_state', 42)
+				if(hasattr(pipeline, 'n_jobs')):
+					setattr(pipeline, 'n_jobs', -1)
 
 			chunks = createChunks(dataset[0],data,features,100)
 
 
 			while(sum([len(chunks[fam][lang]) for fam in [*chunks] for lang in [*chunks[fam]]]) > 0):
-				
+				print([len(chunks[fam][lang]) for fam in [*chunks] for lang in [*chunks[fam]]])
 				current_chunk = []
 				for family in [*chunks]:
 					for language in [*chunks[family]]:
@@ -2213,6 +2227,7 @@ def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 				#print(current_chunk)
 				#print([frame.index for frame in current_chunk])
 				current_chunk = pd.concat([frame for frame in current_chunk])
+				print(len(current_chunk))
 
 
 				#print(max(current_chunk.index))
@@ -2221,23 +2236,47 @@ def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 				X_train, X_test, y_train, y_test = train_test_split(current_chunk, classification_data[classes][(current_chunk.index)], test_size=0.3, random_state=42)
 				try:
 					randomforest.fit(X_train, y_train)
+					cv_resultsRF = cross_validate(randomforest, X_train, y_train, cv=5)
 					predictionRF = randomforest.predict(X_test)
 				except:
 					print(current_chunk)
+					#raise
+
+				X_train, X_test, y_train, y_test = train_test_split(current_chunk, classification_data[classes][(current_chunk.index)], test_size=0.3, random_state=42)
+				try:
+					lr.fit(X_train, y_train)
+					cv_resultsLR = cross_validate(lr, X_train, y_train, cv=5)
+					predictionLR = lr.predict(X_test)
+				except:
+					print(current_chunk)
+					#raise
+
+				X_train, X_test, y_train, y_test = train_test_split(current_chunk, classification_data[classes][(current_chunk.index)], test_size=0.3, random_state=42)
+				try:
+					svm.fit(X_train, y_train)
+					cv_resultsSVM = cross_validate(svm, X_train, y_train, cv=5)
+					predictionSVM = svm.predict(X_test)
+				except:
+					print(current_chunk)
+					#raise
 				
 
 				X_train, X_test, y_train, y_test = train_test_split(current_chunk, classification_data[classes][(current_chunk.index)], test_size=0.3, random_state=42)
 				try:
 					pipeline.fit(X_train, y_train)
+					cv_resultsPipe = cross_validate(pipeline, X_train, y_train, cv=5)
 					predictionPipe = pipeline.predict(X_test)
 				except:
 					print(current_chunk)
+					#raise
 				
 				#print(class_scores['Normal'][dataset[0]][classification_classes[classes]]['RandomForest'])
 
-				class_scores['Normal'][dataset[0]][classification_classes[classes]]['RandomForest'].append({'Prediction':predictionRF, 'Actual':y_test})
-				class_scores['Normal'][dataset[0]][classification_classes[classes]]['Pipeline'].append({'Prediction':predictionPipe, 'Actual':y_test})
-
+				class_scores['Normal'][dataset[0]][classification_classes[classes]]['RandomForest'].append({'Prediction':predictionRF, 'Actual':y_test, 'CV':cv_resultsRF['test_score']})
+				class_scores['Normal'][dataset[0]][classification_classes[classes]]['Pipeline'].append({'Prediction':predictionPipe, 'Actual':y_test, 'CV':cv_resultsPipe['test_score']})
+				class_scores['Normal'][dataset[0]][classification_classes[classes]]['SVM'].append({'Prediction':predictionSVM, 'Actual':y_test, 'CV':cv_resultsSVM['test_score']})
+				class_scores['Normal'][dataset[0]][classification_classes[classes]]['LogisticRegression'].append({'Prediction':predictionLR, 'Actual':y_test, 'CV':cv_resultsLR['test_score']})
+				#print(class_scores['Normal'])
 				#randomforest.n_estimators += 2
 
 			#print(class_scores)
@@ -2245,6 +2284,31 @@ def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 			#plot_confusion_matrix(exported_pipeline,X_test, y_test, display_labels=labeldata,normalize=None,values_format='d', xticks_rotation='vertical', cmap=plt.cm.Blues, ax=ax)
 			#plt.tight_layout()
 			#plt.savefig('classification/'+run+'_All_Twitter', dpi=300)
+
+			fields = [ 'accuracy', 'f1_macro', 'f1_micro', 'precision', 'recall', 'prediction', 'actual', 'cv']
+			for model in class_scores['Normal'][dataset[0]][classification_classes[classes]]:
+				for value in class_scores['Normal'][dataset[0]][classification_classes[classes]][model]:
+					try:
+						#print(dataset[0])
+						acc_score = accuracy_score(value['Actual'],value['Prediction'])
+						f1_macro = f1_score(value['Actual'],value['Prediction'],average='macro')
+						f1_micro = f1_score(value['Actual'],value['Prediction'],average='micro')
+						pre_score = precision_score(value['Actual'],value['Prediction'],average='weighted')
+						rec_score = recall_score(value['Actual'],value['Prediction'],average='weighted')
+						cv_mean = value['CV'].mean()
+						#print(model+' '+source+' '+classification+' '+entry+' Accuracy Score: ',+acc_score)
+						#print(model+' '+source+' '+classification+' '+entry+' f1 macro Score: ',+f1_macro)
+						#print(model+' '+source+' '+classification+' '+entry+' f1 micro Score: ',+f1_micro)
+						#print(model+' '+source+' '+classification+' '+entry+' Precision Score: ',+pre_score)
+						#print(model+' '+source+' '+classification+' '+entry+' Recall Score: ',+rec_score)
+						filename = 'classification/classification_report_'+dataset[0]+'_'+classification_classes[classes]+'_Normal_'+model+'.csv'
+						with open(filename, "a") as f:
+							w = csv.DictWriter(f, fields)
+							w.writeheader()
+							w.writerow({'accuracy':acc_score, 'f1_macro':f1_macro, 'f1_micro':f1_micro, 'precision':pre_score, 'recall':rec_score, 'prediction':value['Prediction'], 'actual':value['Actual'], 'cv':cv_mean})			
+					except:
+						print(value)
+						raise
 
 
 
@@ -2282,16 +2346,26 @@ def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 
 			randomforest = RandomForestClassifier(criterion="gini", n_estimators=100,random_state=42, n_jobs=-1)
 
-			pipeline = make_pipeline(
-		    StandardScaler(),
-		    StackingEstimator(estimator=LinearSVC(C=1.0, dual=False, loss="squared_hinge", penalty="l1", tol=0.0001, max_iter=150000)),
-		    StackingEstimator(estimator=DecisionTreeClassifier(criterion="gini", max_depth=1, min_samples_leaf=11, min_samples_split=6)),
-		    GradientBoostingClassifier(learning_rate=0.1, max_depth=7, max_features=0.25, min_samples_leaf=20, min_samples_split=16, n_estimators=100, subsample=0.5)
-			)
-			set_param_recursive(pipeline.steps, 'random_state', 42)
-			set_param_recursive(pipeline.steps, 'n_jobs', -1)
+			svm = make_pipeline(StandardScaler(),LinearSVC(random_state=42, tol=1e-5))
 
-			tfidf_vectorizer = TfidfVectorizer(use_idf=True, ngram_range = (1,3), max_features=2000)
+			lr = LogisticRegression(random_state=42, n_jobs=-1)
+
+			if(dataset[0] == 'twitter'):
+				pipeline = make_pipeline(
+				    StackingEstimator(estimator=RandomForestClassifier(bootstrap=False, criterion="entropy", max_features=0.3, min_samples_leaf=7, min_samples_split=6, n_estimators=100)),
+				    StackingEstimator(estimator=ExtraTreesClassifier(bootstrap=False, criterion="entropy", max_features=0.8, min_samples_leaf=18, min_samples_split=5, n_estimators=100)),
+				    GaussianNB()
+				)
+				set_param_recursive(pipeline.steps, 'random_state', 42)
+				set_param_recursive(pipeline.steps, 'n_jobs', -1)
+			else:
+				pipeline = LinearSVC(C=10.0, dual=False, loss="squared_hinge", penalty="l1", tol=0.001)
+				if hasattr(pipeline, 'random_state'):
+				    setattr(pipeline, 'random_state', 42)
+				if(hasattr(pipeline, 'n_jobs')):
+					setattr(pipeline, 'n_jobs', -1)
+
+			tfidf_vectorizer = TfidfVectorizer(use_idf=True, ngram_range = (1,3), max_features=1500)
 			tfidf_matrix=tfidf_vectorizer.fit_transform(data['stemmedSentence'].values.tolist())
 			dense = tfidf_matrix.todense()
 			tfidfdata = pd.concat([data,pd.DataFrame(dense)],axis=1).fillna(0)
@@ -2303,7 +2377,7 @@ def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 			
 
 			while(sum([len(chunks[fam][lang]) for fam in [*chunks] for lang in [*chunks[fam]]])> 0):
-				
+				print([len(chunks[fam][lang]) for fam in [*chunks] for lang in [*chunks[fam]]])
 				current_chunk = []
 				for family in [*chunks]:
 					for language in [*chunks[family]]:
@@ -2328,7 +2402,24 @@ def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 				X_train, X_test, y_train, y_test = train_test_split(current_chunk, classification_data[classes][(current_chunk.index)], test_size=0.3, random_state=42)
 				try:
 					randomforest.fit(X_train, y_train)
+					cv_resultsRF = cross_validate(randomforest, X_train, y_train, cv=5)
 					predictionRF = randomforest.predict(X_test)
+				except:
+					print(current_chunk)
+
+				X_train, X_test, y_train, y_test = train_test_split(current_chunk, classification_data[classes][(current_chunk.index)], test_size=0.3, random_state=42)
+				try:
+					lr.fit(X_train, y_train)
+					cv_resultsLR = cross_validate(lr, X_train, y_train, cv=5)
+					predictionLR = lr.predict(X_test)
+				except:
+					print(current_chunk)
+
+				X_train, X_test, y_train, y_test = train_test_split(current_chunk, classification_data[classes][(current_chunk.index)], test_size=0.3, random_state=42)
+				try:
+					svm.fit(X_train, y_train)
+					cv_resultsSVM = cross_validate(svm, X_train, y_train, cv=5)
+					predictionSVM = svm.predict(X_test)
 				except:
 					print(current_chunk)
 				
@@ -2336,41 +2427,75 @@ def classifyDatasets(reddit, redditNE, twitter, combined, combinedNE):
 				X_train, X_test, y_train, y_test = train_test_split(current_chunk, classification_data[classes][(current_chunk.index)], test_size=0.3, random_state=42)
 				try:
 					pipeline.fit(X_train, y_train)
+					cv_resultsPipe = cross_validate(pipeline, X_train, y_train, cv=5)
 					predictionPipe = pipeline.predict(X_test)
 				except:
 					print(current_chunk)
 				
 				#print(class_scores['Normal'][dataset[0]][classification_classes[classes]]['RandomForest'])
 
-				class_scores['TFIDF'][dataset[0]][classification_classes[classes]]['RandomForest'].append({'Prediction':predictionRF, 'Actual':y_test})
-				class_scores['TFIDF'][dataset[0]][classification_classes[classes]]['Pipeline'].append({'Prediction':predictionPipe, 'Actual':y_test})
-		# runClassifiers(X_train, y_train, X_test, y_test, labels, 'Vectorized')
+				class_scores['TFIDF'][dataset[0]][classification_classes[classes]]['RandomForest'].append({'Prediction':predictionRF, 'Actual':y_test, 'CV':cv_resultsRF['test_score']})
+				class_scores['TFIDF'][dataset[0]][classification_classes[classes]]['Pipeline'].append({'Prediction':predictionPipe, 'Actual':y_test, 'CV':cv_resultsPipe['test_score']})
+				class_scores['TFIDF'][dataset[0]][classification_classes[classes]]['SVM'].append({'Prediction':predictionSVM, 'Actual':y_test, 'CV':cv_resultsSVM['test_score']})
+				class_scores['TFIDF'][dataset[0]][classification_classes[classes]]['LogisticRegression'].append({'Prediction':predictionLR, 'Actual':y_test, 'CV':cv_resultsLR['test_score']})
+				#print(class_scores['Normal'])
+				#randomforest.n_estimators += 2
 
+			#print(class_scores)
+			#fig, ax = plt.subplots(figsize=(15, 15))
+			#plot_confusion_matrix(exported_pipeline,X_test, y_test, display_labels=labeldata,normalize=None,values_format='d', xticks_rotation='vertical', cmap=plt.cm.Blues, ax=ax)
+			#plt.tight_layout()
+			#plt.savefig('classification/'+run+'_All_Twitter', dpi=300)
 
+			fields = [ 'accuracy', 'f1_macro', 'f1_micro', 'precision', 'recall', 'prediction', 'actual', 'cv']
+			for model in class_scores['TFIDF'][dataset[0]][classification_classes[classes]]:
+				for value in class_scores['TFIDF'][dataset[0]][classification_classes[classes]][model]:
+					try:
+						#print(dataset[0])
+						acc_score = accuracy_score(value['Actual'],value['Prediction'])
+						f1_macro = f1_score(value['Actual'],value['Prediction'],average='macro')
+						f1_micro = f1_score(value['Actual'],value['Prediction'],average='micro')
+						pre_score = precision_score(value['Actual'],value['Prediction'],average='weighted')
+						rec_score = recall_score(value['Actual'],value['Prediction'],average='weighted')
+						cv_mean = value['CV'].mean()
+						#print(model+' '+source+' '+classification+' '+entry+' Accuracy Score: ',+acc_score)
+						#print(model+' '+source+' '+classification+' '+entry+' f1 macro Score: ',+f1_macro)
+						#print(model+' '+source+' '+classification+' '+entry+' f1 micro Score: ',+f1_micro)
+						#print(model+' '+source+' '+classification+' '+entry+' Precision Score: ',+pre_score)
+						#print(model+' '+source+' '+classification+' '+entry+' Recall Score: ',+rec_score)
+						filename = 'classification/classification_report_'+dataset[0]+'_'+classification_classes[classes]+'_TFIDF_'+model+'.csv'
+						with open(filename, "a") as f:
+							w = csv.DictWriter(f, fields)
+							w.writeheader()
+							w.writerow({'accuracy':acc_score, 'f1_macro':f1_macro, 'f1_micro':f1_micro, 'precision':pre_score, 'recall':rec_score, 'prediction':value['Prediction'], 'actual':value['Actual'], 'cv':cv_mean})			
+					except:
+						print(value)
+						raise
 
-		fields = [ 'accuracy', 'f1_macro', 'f1_micro', 'precision', 'recall', 'prediction', 'actual']
-		for model in class_scores:
-			for classification in class_scores[model][dataset[0]]:
-				for entry in class_scores[model][dataset[0]][classification]:
-					for value in class_scores[model][dataset[0]][classification][entry]:
-						try:
-							acc_score = accuracy_score(value['Actual'],value['Prediction'])
-							f1_macro = f1_score(value['Actual'],value['Prediction'],average='macro')
-							f1_micro = f1_score(value['Actual'],value['Prediction'],average='micro')
-							pre_score = precision_score(value['Actual'],value['Prediction'],average='weighted')
-							rec_score = recall_score(value['Actual'],value['Prediction'],average='weighted')
-							print(model+' '+source+' '+classification+' '+entry+' Accuracy Score: ',+acc_score)
-							print(model+' '+source+' '+classification+' '+entry+' f1 macro Score: ',+f1_macro)
-							print(model+' '+source+' '+classification+' '+entry+' f1 micro Score: ',+f1_micro)
-							print(model+' '+source+' '+classification+' '+entry+' Precision Score: ',+pre_score)
-							print(model+' '+source+' '+classification+' '+entry+' Recall Score: ',+rec_score)
-							filename = 'classification/classification_report_'+dataset[0]+'_'+classification+'_'+model+'_'+entry+'.csv'
-							with open(filename, "a") as f:
-								w = csv.DictWriter(f, fields)
-								w.writeheader()
-								w.writerow({'accuracy':acc_score, 'f1_macro':f1_macro, 'f1_micro':f1_micro, 'precision':pre_score, 'recall':rec_score, 'prediction':value['Prediction'], 'actual':value['Actual']})			
-						except:
-							print(value)
+		# fields = [ 'accuracy', 'f1_macro', 'f1_micro', 'precision', 'recall', 'prediction', 'actual']
+		# for model in class_scores:
+		# 	for classification in class_scores[model][dataset[0]]:
+		# 		for entry in class_scores[model][dataset[0]][classification]:
+		# 			for value in class_scores[model][dataset[0]][classification][entry]:
+		# 				try:
+		# 					print(value)
+		# 					acc_score = accuracy_score(value['Actual'],value['Prediction'])
+		# 					f1_macro = f1_score(value['Actual'],value['Prediction'],average='macro')
+		# 					f1_micro = f1_score(value['Actual'],value['Prediction'],average='micro')
+		# 					pre_score = precision_score(value['Actual'],value['Prediction'],average='weighted')
+		# 					rec_score = recall_score(value['Actual'],value['Prediction'],average='weighted')
+		# 					#print(model+' '+source+' '+classification+' '+entry+' Accuracy Score: ',+acc_score)
+		# 					#print(model+' '+source+' '+classification+' '+entry+' f1 macro Score: ',+f1_macro)
+		# 					#print(model+' '+source+' '+classification+' '+entry+' f1 micro Score: ',+f1_micro)
+		# 					#print(model+' '+source+' '+classification+' '+entry+' Precision Score: ',+pre_score)
+		# 					#print(model+' '+source+' '+classification+' '+entry+' Recall Score: ',+rec_score)
+		# 					filename = 'classification/classification_report_'+dataset[0]+'_'+classification+'_'+model+'_'+entry+'.csv'
+		# 					with open(filename, "a") as f:
+		# 						w = csv.DictWriter(f, fields)
+		# 						w.writeheader()
+		# 						w.writerow({'accuracy':acc_score, 'f1_macro':f1_macro, 'f1_micro':f1_micro, 'precision':pre_score, 'recall':rec_score, 'prediction':value['Prediction'], 'actual':value['Actual'], 'cv':value['CV']})			
+		# 				except:
+		# 					print(value)
 if __name__ == "__main__":
 	data = sys.argv[1]
 	method = sys.argv[2]

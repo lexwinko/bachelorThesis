@@ -158,6 +158,20 @@ cd ../
 #cat tagged_greeceNE.csv > greekNE.csv
 #cd ../
 
+mkdir greek
+cd greek/
+head -100000 /media/sf_Shared/reddit_filtered/nonnative/Greek/reddit.Greece.tok.clean.csv | split -dl 10000 --additional-suffix=.csv - greece_
+head -100000 /media/sf_Shared/reddit_filtered/nonnative/Greek/reddit.Greece.tok.cleanNE.csv | split -dl 10000 --additional-suffix=.csv - greeceNE_
+
+python3 ../../../tools/filterCSV.py greece_00.csv reformat reddit greece
+python3 ../../../tools/filterCSV.py greeceNE_00.csv reformat reddit greeceNE
+python3 ../../../tools/filterCSV.py reformat_reddit_greece.csv tag Greek Greek NonNative
+python3 ../../../tools/filterCSV.py reformat_reddit_greeceNE.csv tag Greek Greek NonNative
+find . -type f ! -name "*tagged*" -exec rm -rf {} \;
+cat tagged_reformat_reddit_greece.csv > greek.csv
+cat tagged_reformat_reddit_greece.csv > greekNE.csv
+cd ../
+
 #romance 10000/1650
 mkdir romance
 cd romance/
@@ -204,16 +218,19 @@ cat tagged_reformat_reddit_franceNE.csv tagged_reformat_reddit_italyNE.csv tagge
 cd ../
 
 #turkic 10000/10000
-#mkdir turkic
-#cd turkic/
-#head -100000 /media/sf_Shared/reddit_filtered/nonnative/Turkic/reddit.Turkey.tok.clean.csv | split -dl 10000 --additional-suffix=.csv - turkey_
-#head -100000 /media/sf_Shared/reddit_filtered/nonnative/Turkic/reddit.Turkey.tok.cleanNE.csv | split -dl 10000 --additional-suffix=.csv - turkeyNE_
-#python3 ../../../tools/filterCSV.py turkey_00.csv tag Turkic Turkish
-#python3 ../../../tools/filterCSV.py turkeyNE_00.csv tag Turkic Turkish
-#find . -type f ! -name "*tagged*" -exec rm -rf {} \;
-#cat tagged_turkey.csv > turkic.csv
-#cat tagged_turkeyNE.csv > turkicNE.csv
-#cd ../
+mkdir turkic
+cd turkic/
+head -100000 /media/sf_Shared/reddit_filtered/nonnative/Turkic/reddit.Turkey.tok.clean.csv | split -dl 10000 --additional-suffix=.csv - turkey_
+head -100000 /media/sf_Shared/reddit_filtered/nonnative/Turkic/reddit.Turkey.tok.cleanNE.csv | split -dl 10000 --additional-suffix=.csv - turkeyNE_
+
+python3 ../../../tools/filterCSV.py turkey_00.csv reformat reddit turkey
+python3 ../../../tools/filterCSV.py turkeyNE_00.csv reformat reddit turkeyNE
+python3 ../../../tools/filterCSV.py reformat_reddit_turkey.csv tag Turkic Turkish NonNative
+python3 ../../../tools/filterCSV.py reformat_reddit_turkeyNE.csv tag Turkic Turkish NonNative
+find . -type f ! -name "*tagged*" -exec rm -rf {} \;
+cat tagged_reformat_reddit_turkey.csv > turkic.csv
+cat tagged_reformat_reddit_turkey.csv > turkicNE.csv
+cd ../
 
 #uralic 10000/5000
 # mkdir uralic

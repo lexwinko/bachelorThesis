@@ -38,15 +38,24 @@ from nltk.tokenize import word_tokenize
 def formatText(text):
 	text = str(text)
 	text = text.replace("\\n", "  ")
+	text = text.replace("\\'t", "'t")
+	text = text.replace("\\ 's", "'s")
+	text = text.replace("\\ 'r", "'r")
+	text = text.replace("\\ 'l", "'l")
+	text = text.replace("\\'l", "'l")
+	text = text.replace("\\ 'v", "'v")
 	text = text.replace("\ ", "")
+	text = text.replace('\\ " ', '"')
 	text = text.replace("''", ' "')
 	text = text.replace("``", '"')
 	text = text.replace(" n'", "n'")
 	text = text.replace(" 'r", "'r")
 	text = text.replace("gon na", "gonna")
 	text = text.replace(" 'll", "'ll")
-	text = text.replace(" : )", ":)")
+	text = text.replace(": )", ":)")
 	text = text.replace(" : - )", ":-)")
+	text = text.replace("s : ", "s:")
+	text = text.replace("p : ", "p:")
 	text = text.replace(" : ", ": ")
 	text = text.replace(" :/", ":/")
 	text = text.replace("? !", "?!")
@@ -125,11 +134,12 @@ def extractFeatures(text, lang=['en','en-US']):
 	functionWords = []
 	  
 	for w in word_tokens: 
-	    if w not in stop_words: 
+	    if w not in stop_words:
 	        filtered_words.append(w)
 	    else:
 	    	functionWords.append(w)
 	
+	#print(filtered_words)
 	
 	countElongated = techniques.countElongated(text)
 	#sentenceWords = techniques.words(text)
@@ -171,7 +181,11 @@ def extractFeatures(text, lang=['en','en-US']):
 
 	stemmed_words = []
 	for word in filtered_words:
-		stemmed_words.append(porter.stem(word))
+		if word not in stop_words: 
+			stemmed_words.append(porter.stem(word))
+		else:
+			functionWords.append(word)
+		
 	stemmed_sentence = ' '.join(stemmed_words)
 
 	tokenizer = RegexpTokenizer("[a-zA-Z]+")
@@ -233,6 +247,7 @@ def analyzeText(file, filetype):
 		if((num_row % 100) == 0):
 			print(str(num_row)+' / '+str(len(textImported)))
 
+	print(textFiltered)
 	text_POS = []
 	num_row = 0
 	if(filetype == 'reddit'):
@@ -328,9 +343,9 @@ def analyzeText(file, filetype):
 		for tag in text_POS[num_tweet]:
 			key = tag[1]
 			if key in textFiltered[num_tweet][2]:
-				textFiltered[num_tweet][2][key] += 1 / max(1, textFiltered[num_tweet][0]['textLength']) * 100
+				textFiltered[num_tweet][2][key] += 1 / max(1, textFiltered[num_tweet][0]['textLength'])
 			else:
-				textFiltered[num_tweet][2][key] = 1 / max(1, textFiltered[num_tweet][0]['textLength']) * 100
+				textFiltered[num_tweet][2][key] = 1 / max(1, textFiltered[num_tweet][0]['textLength'])
 
 
 		textFiltered[num_tweet][2]['#'] = len(textFiltered[num_tweet][0]['hashtag'])

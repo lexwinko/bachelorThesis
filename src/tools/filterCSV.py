@@ -1,12 +1,16 @@
 import sys
 import pandas as pd
+import numpy as np
 import csv
 import os
 import re
 from ngram import NGram
 from nltk.util import ngrams
+from nltk import WordPunctTokenizer
 from collections import OrderedDict
 import itertools
+from gensim.models import Word2Vec
+from sklearn.cluster import AffinityPropagation
 
 from sklearn.feature_extraction.text import TfidfVectorizer 
 
@@ -113,6 +117,66 @@ def splitFile(file, ratio, origin):
 		split_r = pd.DataFrame(split_r,columns=fileCol)
 		split_l.to_csv("output/split_"+origin+"_lower_category.csv", index=False)
 		split_r.to_csv("output/split_"+origin+"_upper_category.csv", index=False)
+
+def word2VecModel(file, origin):
+	txt_Import = pd.read_csv(file, header=None, sep=',', skiprows=1)
+	txt_Import.columns = [ 'correctedSentence','originalSentence','filteredSentence','stemmedSentence','elongated','caps','textLength','sentenceWordLength','spellDelta','charTrigrams','wordBigrams','wordUnigrams','POSBigrams','functionWords','hashtag','url','#', '@', 'E', ",", '~', 'U', 'A', 'D', '!', 'N', 'P', 'O', 'R', '&', 'L', 'Z', '^', 'V', '$', 'G', 'T', 'X', 'S', 'Y', 'M' ,'langFam', 'lang', 'category', 'origin']
+	txt_Import = txt_Import[txt_Import.filteredSentence.str.contains('filteredSentence') == False]
+	used_features =['correctedSentence', 'lang', 'langFam', 'category', 'origin']
+	txt_Import = txt_Import[used_features]
+
+	wpt = WordPunctTokenizer()
+	tokenized_corpus = []
+	for x in txt_Import['correctedSentence']:
+		print(x)
+		tokenized_corpus.append(wpt.tokenize(x.lower()))
+
+	# Set values for various parameters
+	feature_size = 10    # Word vector dimensionality  
+	window_context = 10          # Context window size                                                                                    
+	min_word_count = 1   # Minimum word count                        
+	sample = 1e-3   # Downsample setting for frequent words
+
+	w2v_model = Word2Vec(tokenized_corpus, size=feature_size, 
+								  window=window_context, min_count = min_word_count,
+								  sample=sample, iter=100)
+
+	def average_word_vectors(words, model, vocabulary, num_features):
+	
+		feature_vector = np.zeros((num_features,),dtype="float64")
+		nwords = 0.
+		
+		for word in words:
+			if word in vocabulary: 
+				nwords = nwords + 1.
+				feature_vector = np.add(feature_vector, model[word])
+		
+		if nwords:
+			feature_vector = np.divide(feature_vector, nwords)
+			
+		return feature_vector
+	
+   
+	def averaged_word_vectorizer(corpus, model, num_features):
+		vocabulary = set(model.wv.index2word)
+		features = [average_word_vectors(tokenized_sentence, model, vocabulary, num_features)
+						for tokenized_sentence in corpus]
+		return np.array(features)
+
+
+	# get document level embeddings
+	#w2v_feature_array = averaged_word_vectorizer(corpus=tokenized_corpus, model=w2v_model, num_features=feature_size)
+
+	similar_words = {search_term: [item[0] for item in w2v_model.wv.most_similar([search_term], topn=5)]
+			for search_term in ['thank', 'number', 'too']}
+	print(similar_words)
+	# ap = AffinityPropagation()
+	# ap.fit(w2v_feature_array)
+	# cluster_labels = ap.labels_
+	# cluster_labels = pd.DataFrame(cluster_labels, columns=['ClusterLabel'])
+	# corpus_df = pd.concat([txt_Import['filteredSentence'], cluster_labels], axis=1)
+	# print(corpus_df)
+
 
 
 def ngramModel(file, origin):
@@ -820,19 +884,19 @@ def createClassifierFile(file,filters):
 	data = data[data.filteredSentence.str.contains('filteredSentence') == False]
 
 	if(filters == 'redditE'):
-	 	extension = 'reddit'
-	 	version = 'european'
+		extension = 'reddit'
+		version = 'european'
 	elif(filters == 'redditNE'):
-	 	extension = 'reddit'
-	 	version = 'noneuropean'
+		extension = 'reddit'
+		version = 'noneuropean'
 	elif(filters == 'combinedE'):
-	 	extension = 'combined'
-	 	version = 'european'
+		extension = 'combined'
+		version = 'european'
 	elif(filters == 'combinedNE'):
-	 	extension = 'combined'
-	 	version = 'noneuropean'
+		extension = 'combined'
+		version = 'noneuropean'
 	elif(filters == 'twitter'):
-	 	extension = 'twitter'
+		extension = 'twitter'
 	# 	category= [
 	# 			'ArtCul',
 	# 			'BuiTecSci',
@@ -2313,5 +2377,8 @@ if __name__ == "__main__":
 	elif(func == 'average'):
 		print('Averaging functions for '+filters)
 		calculateFeatureAverage(file, filters, arg2)
+	elif(func == 'word2vec'):
+		print('Word2Vec for '+filters)
+		word2VecModel(file, filters)
 	print('Done')
 	#print(result)

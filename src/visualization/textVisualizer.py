@@ -7,6 +7,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sn
 import sys
 import re
+import csv
 from itertools import chain
 
 
@@ -1557,12 +1558,8 @@ def plotConfusionMatrix(source):
 			'NonNative'
 		]
 
-	category = [
-		'Reddit',
-		'Twitter'
-	]
 	if(source == 'Combined' or source == 'CombinedNE'):
-		classes = ['Origin', 'Language', 'Language_Family', 'Category']
+		classes = ['Origin', 'Language', 'Language_Family']
 		lang = [
 				'Bulgarian',
 				'Croatian',
@@ -1600,7 +1597,7 @@ def plotConfusionMatrix(source):
 				
 		]
 	elif(source == 'Twitter'):
-		classes = ['Origin', 'Language', 'Language_Family']
+		classes = ['Origin', 'Language_Family', 'Language']
 		lang = [
 				'English',
 				'French', 
@@ -1651,7 +1648,7 @@ def plotConfusionMatrix(source):
 			'Romance'
 		]
 	featuresets = ['Normal', 'TFIDF']
-	models = ['RandomForest', 'Pipeline']
+	models = ['RandomForest', 'Pipeline', 'LogisticRegression', 'SVM']
 	fileList = []
 
 	for x in classes:
@@ -1660,9 +1657,179 @@ def plotConfusionMatrix(source):
 				filename = 'classification/classification_report_'+source+'_'+x+'_'+feature+'_'+model+'.csv'
 				fileList.append([filename,x,feature,model])
 
-	print(fileList)
+	output = pd.DataFrame({
+			'RandomForest':{
+				'Normal':{
+					'Language':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Language_Family':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Origin':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					}
+				},
+				'TFIDF':{
+					'Language':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Language_Family':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0,'std': 0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Origin':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0,'std': 0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					}
+				}
+			},
+			'Pipeline':{
+				'Normal':{
+					'Language':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Language_Family':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Origin':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					}
+				},
+				'TFIDF':{
+					'Language':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Language_Family':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0,'std': 0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Origin':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0,'std': 0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					}
+				}
+			},
+			'LogisticRegression':{
+				'Normal':{
+					'Language':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Language_Family':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Origin':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					}
+				},
+				'TFIDF':{
+					'Language':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Language_Family':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0,'std': 0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Origin':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0,'std': 0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					}
+				}
+			},
+			'SVM':{
+				'Normal':{
+					'Language':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Language_Family':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Origin':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					}
+				},
+				'TFIDF':{
+					'Language':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0 ,'std':0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Language_Family':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0,'std': 0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					},
+					'Origin':{
+							'accuracy': {'mean': 0,'median': 0,'std': 0},
+							'f1_macro': {'mean': 0,'median': 0,'std': 0},
+							'precision': {'mean':0,'median': 0,'std': 0},
+							'cv': {'mean':0,'median': 0 ,'std':0}
+					}
+				}
+			}
+			})
 	for file in fileList:
 		print(file[1])
+		print(file)
 		if(file[1] == 'Origin'):
 			labels = origin
 			title = 'Result for Origin prediction'
@@ -1672,21 +1839,31 @@ def plotConfusionMatrix(source):
 		elif(file[1] == 'Language_Family'):
 			labels = family
 			title = 'Result for Language Family prediction'
-		else:
-			labels = category
-			title = 'Result for Category prediction'
 		data = pd.read_csv(file[0], header=None, sep=',', skiprows=1)
-		data.columns = ['accuracy', 'f1_macro', 'f1_micro', 'precision', 'recall', 'prediction', 'actual']
+		data.columns = ['accuracy', 'f1_macro', 'f1_micro', 'precision', 'recall', 'prediction', 'actual', 'cv']
 		data = data[data.accuracy.str.contains('accuracy') == False]
 
-		scores = ['accuracy', 'f1_macro', 'f1_micro', 'precision', 'recall']
+		scores = ['accuracy', 'f1_macro', 'precision', 'cv']
 		values = ['prediction', 'actual']
-		#accuracy = pd.to_numeric(data['accuracy'])
-		#data = data[values]
-		#max_value = accuracy.idxmax()
-		#print(max_value)
-		#print(data.at[max_value, 'actual'])
-		#print(data.at[max_value, 'prediction'])
+
+
+#
+		#accuracy = pd.to_numeric(data['accuracy'],downcast='float')
+		#f1 = pd.to_numeric(data['f1_macro'],downcast='float')
+		#prec = pd.to_numeric(data['precision'],downcast='float')
+
+		for score in scores:
+			output[file[3]][file[2]][file[1]][score]['mean'] = pd.to_numeric(data[score],downcast='float').mean()
+			output[file[3]][file[2]][file[1]][score]['median'] = pd.to_numeric(data[score],downcast='float').median()
+			output[file[3]][file[2]][file[1]][score]['std'] = pd.to_numeric(data[score],downcast='float').std()
+		
+		
+		
+
+
+
+
+
 		y_true = []
 		for x in data['actual'].values:
 
@@ -1731,10 +1908,11 @@ def plotConfusionMatrix(source):
 			else:
 				fig, ax = plt.subplots(figsize=(5, 5))
 
+
 		array = confusion_matrix(y_true,y_pred)
-		print(array)
+		#print(array)
 		df_cm = pd.DataFrame(array, index = labels,
-                  columns = labels)
+				  columns = labels)
 		sn.heatmap(df_cm, annot=True, cmap=plt.cm.Blues, fmt="d", ax=ax, lw=0.5)
 		#sn.set(font_scale=1.4) # for label size
 		ax.set(xlabel='Predicted label', ylabel='Actual label')
@@ -1744,6 +1922,22 @@ def plotConfusionMatrix(source):
 		plt.savefig('visualization/'+source+'_'+file[1]+'_'+file[2]+'_'+file[3], dpi=300)
 		plt.close()
 
+	#output.to_csv('visualization/'+source+'_'+file[1]+'_'+file[2]+'_'+file[3]+'.csv')
+	fields = ['Model', 'Features', 'Class', 'Score', 'Mean', 'Median', 'STD']
+	scores = ['accuracy', 'f1_macro', 'precision', 'cv']
+	with open("visualization/scores_"+source+".csv", "w") as f:
+		w = csv.DictWriter(f, fields)
+		w.writeheader()
+		for model in models:
+			#print(model)
+			for feature in featuresets:
+				#print(feature)
+				for clss in classes:
+					#print(clss)
+					for score in scores:
+						#print(score)
+						output[model][feature][clss][score]
+						w.writerow({'Model':model, 'Features':feature, 'Class':clss, 'Score':score, 'Mean':output[model][feature][clss][score]['mean'], 'Median':output[model][feature][clss][score]['median'], 'STD':output[model][feature][clss][score]['std']})
 
 
 
