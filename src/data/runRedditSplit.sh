@@ -262,7 +262,7 @@ cd native/
 cp ../../../../data/raw/Native/ArtCul/* .
 cp ../../../../data/raw/Native/BuiTecSci/* .
 cp ../../../../data/raw/Native/Pol/* .
-cp ../../../../data/raw/Native/SocSoc/* .
+cp ../../../../data/raw/Native/SocSoc/* . 
 cat * > twitter_native.csv
 python3 ../../../tools/filterCSV.py twitter_native.csv reformat twitter native
 find . -type f ! -name "*reformat*" -exec rm -rf {} \;

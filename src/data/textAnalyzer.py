@@ -307,7 +307,7 @@ def analyzeText(file, filetype):
 
 
 	
-	textFiltered = textFiltered[:len(text_POS)]
+	textFiltered = textFiltered[:len(text_POS)] 
 
 	#	N : Common Noun
 	#	O : Pronoun
